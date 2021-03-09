@@ -91,18 +91,24 @@ class TreeAgent(Agent):
 
     def open(self, initial_state, player_id):
         self.tree = Tree(initial_state, self.core_agent, self.fast_agent, player_id)
+        self.tree.search(n_rollouts=self.n_rollouts)
+
+
+        policy, value = self.tree.get_policy_and_value()
+        print(' ' * 50, policy, f' {value:.3f}')
 
     def set_move(self, move: ActionDistribution):
         n = move.get_non_zero()[0]
         self.tree.re_plant(n)
 
+
+        if not self.tree.root.state.is_game_over():
+            policy, value = self.tree.get_policy_and_value()
+            print(' ' * 50, policy, f' {value:.3f}')
+
+
     def get_move(self, state):
         self.tree.search(n_rollouts=self.n_rollouts)
+        policy, value = self.tree.get_policy_and_value()
 
-        print('\n')
-        print(self.tree)
-        print()
-        print(self.tree.get_policy_and_value())
-        print('\n')
-
-        return self.tree.get_policy_and_value()
+        return policy, value

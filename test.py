@@ -53,36 +53,19 @@ def test_kifu(board_size=6, stones=4, komi=.5, k=1.):
     i_print(data['values'])
 
 
-def test_trees(board_size=3, stones=1, komi=-.5, player=0, n_rollouts=200):
+def test_trees(board=None, board_size=3, stones=1, komi=.5, player=0, n_rollouts=200):
 
     state0 = State(board_size=board_size, stones=stones, komi=komi, player=player)
 
-    # state0.board = [0, 0, 1, 5,
-    #                 0, 3, 0, 3]
-
-    state0.board = [0, 3, 0, 3,
-                    0, 0, 1, 5]
-
-    # state0.board = [3, 1, 1, 0, 0, 0, 1, 4]     # bs=3 p=0
-    # state0.board = [0, 0, 1, 4, 3, 1, 1, 0]     # bs=3 p=1
-
-    # state0.board = [3, 3, 0, 2, 0, 1, 0, 4]
-
-    # state0.board = [3, 1, 1, 0, 0, 0, 1, 4]
-    # state0.board = [3, 1, 0, 0, 3, 1, 0, 0]     # bs=3 p=1
-
-    # state0.board = [0, 0, 6, 1, 4,
-    #                 4, 4, 4, 0, 1]
-
-    # state0.board = [4, 4, 4, 0, 1,
-    #                 0, 0, 6, 1, 4]
+    if board is not None:
+        state0.board = board
 
     tree = Tree(state0, core_agent=RandomAgent(), fast_agent=SimpleAgent(), player_id=player)
 
     tree.search(n_rollouts)
     policy, value = tree.get_policy_and_value()
 
-    print()
+    print('\n')
     print('n_visits =', tree.root.visits)
     print('p =', policy)
     print(f'v = {value:.3f}')
@@ -92,11 +75,45 @@ def test_trees(board_size=3, stones=1, komi=-.5, player=0, n_rollouts=200):
     print('n_visits =', tree.root.visits)
     print('p =', policy)
     print(f'v = {value:.3f}')
+    print('\n')
 
 
-def test_game(board_size=3, stones=2, komi=.5):
+def test_trees_exp(expectation: int, board=None, board_size=3, stones=1, komi=.5, player=0, n_rollouts=200):
+
+    state0 = State(board_size=board_size, stones=stones, komi=komi, player=player)
+
+    if board is not None:
+        state0.board = board
+
+    tree = Tree(state0, core_agent=RandomAgent(), fast_agent=SimpleAgent(), player_id=player)
+
+    tree.search(n_rollouts)
+    policy, value = tree.get_policy_and_value()
+
+    if policy.quick_choose() != expectation:
+        print('\n')
+        print(tree.root.state)
+        print()
+        print('p =', policy)
+        print('\n')
+
+        # print('\n')
+        # print('n_visits =', tree.root.visits)
+        # print('p =', policy)
+        # print(f'v = {value:.3f}')
+        # print()
+        # print(tree)
+        # print()
+        # print('n_visits =', tree.root.visits)
+        # print('p =', policy)
+        # print(f'v = {value:.3f}')
+        # print('\n')
+        # input()
+
+
+def test_game(board_size=4, stones=3, komi=.5):
     # agent_1 = RandomAgent()
-    agent_2 = TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100)
+    agent_2 = TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100)
     # agent_1 = SimpleAgent()
     agent_1 = HumanAgent()
 
@@ -130,6 +147,23 @@ if __name__ == '__main__':
     #     test_trees(n_rollouts=2**n_)
     #     input()
 
-    test_trees()
-    # test_game()
+    # test_trees(board=[0, 3, 0, 3, 0, 0, 1, 5], komi=-.5, player=0)
+    # test_trees(board=[0, 0, 1, 5, 0, 3, 0, 3], komi=+.5, player=1)
+
+
+    # test_trees_exp(expectation=2, board=[3, 1, 1, 0, 0, 0, 1, 4], player=0)
+    # test_trees_exp(expectation=2, board=[3, 1, 1, 0, 0, 1, 1, 4], player=0)
+    # test_trees_exp(expectation=0, board=[3, 1, 0, 0, 1, 1, 1, 3], player=0)
+    # test_trees_exp(expectation=2, board=[3, 1, 2, 1, 3, 1, 0, 0], player=0)
+    #
+    # test_trees_exp(expectation=2, board=[0, 0, 1, 4, 3, 1, 1, 0], player=1, komi=-.5)
+    # test_trees_exp(expectation=2, board=[3, 1, 1, 0, 0, 1, 1, 4], player=1, komi=-.5)
+    # test_trees_exp(expectation=0, board=[1, 1, 1, 3, 3, 1, 0, 0], player=1, komi=-.5)
+    # test_trees_exp(expectation=2, board=[3, 1, 0, 0, 3, 1, 2, 1], player=1, komi=-.5)
+
+
+    # test_trees(board_size=4, stones=3, n_rollouts=2000)
+
+    test_game()
+
     # test_elo()
