@@ -83,17 +83,26 @@ class HumanAgent(Agent):
 
 class TreeAgent(Agent):
     """"""
-    def __init__(self, fast_agent, n_rollouts):
+    def __init__(self, core_agent, fast_agent, n_rollouts):
         self.tree = None
+        self.core_agent = core_agent
         self.fast_agent = fast_agent
         self.n_rollouts = n_rollouts
 
     def open(self, initial_state, player_id):
-        self.tree = Tree(initial_state, self.fast_agent, player_id)
+        self.tree = Tree(initial_state, self.core_agent, self.fast_agent, player_id)
 
     def set_move(self, move: ActionDistribution):
         n = move.get_non_zero()[0]
         self.tree.re_plant(n)
 
     def get_move(self, state):
-        return self.tree.get_policy_and_value(self.n_rollouts)
+        self.tree.search(n_rollouts=self.n_rollouts)
+
+        print('\n')
+        print(self.tree)
+        print()
+        print(self.tree.get_policy_and_value())
+        print('\n')
+
+        return self.tree.get_policy_and_value()

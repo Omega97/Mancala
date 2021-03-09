@@ -16,6 +16,8 @@ class Node:
         self.child = dict()
         self.score = 0
         self.visits = 0
+        self._n_root_visits = None
+        self._base_depth = None
 
     def add_child(self, move_id):
         """check if state already exists"""
@@ -28,15 +30,34 @@ class Node:
         self.child[move_id] = new_node
         return new_node
 
-    def backtracking(self, score):
+    def backtracking(self, outcome, player_id):
         """"""
         self.visits += 1
-        self.score += score if self.state.player == 0 else 1-score
-        if self.parent is not None:
-            self.parent.backtracking(score)
 
-    def expectation(self):
-        return (self.score + 1) / (self.visits + 2)
+
+
+        # self.score += outcome if self.state.player == 0 else 1 - outcome
+        self.score += outcome if player_id == 0 else 1 - outcome
+
+
+
+        if self.parent is not None:
+            self.parent.backtracking(outcome, player_id)
+
+    def expectation(self, player):
+        outcome = self.outcome()
+        if outcome is None:
+            return (self.score + 1) / (self.visits + 2)
+        else:
+            return outcome if player == 0 else 1-outcome
+
+    def priority(self):
+        x = self.score
+        n = self.visits
+
+
+        return (x+1) / (n+2)**2
+
 
     def is_terminal(self):
         return self.state.is_game_over()
@@ -44,41 +65,59 @@ class Node:
     def choose_move_id(self):
         priorities = copy(self.policy.v)
         for i in self.child:
-            x = self.child[i].score
-            n = self.child[i].visits
-            priorities[i] *= (x+1) / (n+2)**2
-
+            priorities[i] = self.child[i].priority()    # todo ??
         return choose(priorities)
 
     def outcome(self):
         return self.state.result()
 
-    def __repr__(self, state_space=40, n_bar=10):
+    def __repr__(self, bar_length=40):
+        if self._n_root_visits is None:
+            self._n_root_visits = self.visits
+        for i in self.child:
+            self.child[i]._n_root_visits = self._n_root_visits
+
+        if self._base_depth is None:
+            self._base_depth = self.depth
+        for i in self.child:
+            self.child[i]._base_depth = self._base_depth
+
         s = ' '
         s += str(self.state)
-        s += ' ' * 5
+        s += ' ' * 4
         x = self.outcome()
         if x == 0:
-            s += 'X' + ' ' * (n_bar+4) + ' '
+            s += 'X'
         elif x == 1:
-            s += 'O' + ' ' * (n_bar+4) + ' '
+            s += 'O'
         else:
-            n = int(self.expectation() * n_bar)
-            s += ' ' * 4 + '|' + '#' * n + ' ' * (n_bar - n) + '|'
-        s += ' ' * 5
-        s += '.  ' * self.depth
+            s += ' '
+        s += ' ' * 4
+
+        n_bar = round(bar_length * self.visits / self._n_root_visits)
+
+        n = round(self.expectation(self.state.player) * n_bar)
+        c = '|' + '#' * n + ' ' * (n_bar - n) + '|'
+
+        s += f'{c:{6 + bar_length}}'
+        s += ' ' * 4
+        s += '.  ' * (self.depth - self._base_depth)
         s += f'{self.score} / {self.visits}'
         s += '   -   '
-        s += f'{self.expectation():.3f}'
+        s += f'{self.expectation(self.state.player):.3f}'
         for i in self.child:
             s += '\n' + str(self.child[i])
+
+        self._n_root_visits = None
+        self._base_depth = None
+
         return s
 
 
 class Tree:
 
-    def __init__(self, state, fast_agent, player_id):
-        self.root = Node(state, fast_agent)
+    def __init__(self, state, core_agent, fast_agent, player_id):
+        self.root = Node(state, core_agent)
         self.fast_agent = fast_agent
         self.active_nodes = [self.root]
         self.node_count = 1
@@ -120,7 +159,7 @@ class Tree:
                 outcome = node.outcome()
 
                 # update tree
-                node.backtracking(outcome)
+                node.backtracking(outcome, self.player_id)
 
             else:
                 # do rollout
@@ -130,20 +169,23 @@ class Tree:
                 outcome = rollout.outcome
 
                 # update tree
-                node.backtracking(outcome)
+                node.backtracking(outcome, self.player_id)
 
-    def get_policy_and_value(self, n_rollouts):
-        self.search(n_rollouts=n_rollouts)
+    def get_policy_and_value(self):
 
         if len(self.root.child) == 0:
-            raise ValueError('Tree has no nodes!')
+            raise ValueError('Tree has no nodes, perform search first!')
 
         v = [1 for _ in self.root.policy]
 
         for i in self.root.child:
             v[i] = self.root.child[i].visits
 
-        return ActionDistribution(v), self.root.score
+        a = ActionDistribution(v)
+        a *= self.root.state.legal_moves()
+        a = a.focus(k=.95)
+
+        return a, self.root.score / self.root.visits
 
     def re_plant(self, move_id):
         """"""

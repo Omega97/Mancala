@@ -2,7 +2,6 @@ from utils import *
 from agents import *
 from game import Game, State, compute_elo
 from tree import Tree
-from omar_utils.basic.iter_utils import yield_periodically
 
 
 def test_mancala_gen():
@@ -54,35 +53,65 @@ def test_kifu(board_size=6, stones=4, komi=.5, k=1.):
     i_print(data['values'])
 
 
-def test_trees(player=0, n_rollouts=2000):
-    fast_agent = RandomAgent()
-    state0 = State(board_size=3, stones=1, komi=.5, player=player)
-    state0.board = [3, 1, 1, 0,
-                    0, 0, 1, 4]
-    # state0.board = [3, 1, 0, 0, 3, 1, 0, 0]
+def test_trees(board_size=3, stones=1, komi=-.5, player=0, n_rollouts=200):
 
-    tree = Tree(state0, fast_agent, player_id=player)
+    state0 = State(board_size=board_size, stones=stones, komi=komi, player=player)
 
-    tree.search(n_rollouts=n_rollouts)
+    # state0.board = [0, 0, 1, 5,
+    #                 0, 3, 0, 3]
+
+    state0.board = [0, 3, 0, 3,
+                    0, 0, 1, 5]
+
+    # state0.board = [3, 1, 1, 0, 0, 0, 1, 4]     # bs=3 p=0
+    # state0.board = [0, 0, 1, 4, 3, 1, 1, 0]     # bs=3 p=1
+
+    # state0.board = [3, 3, 0, 2, 0, 1, 0, 4]
+
+    # state0.board = [3, 1, 1, 0, 0, 0, 1, 4]
+    # state0.board = [3, 1, 0, 0, 3, 1, 0, 0]     # bs=3 p=1
+
+    # state0.board = [0, 0, 6, 1, 4,
+    #                 4, 4, 4, 0, 1]
+
+    # state0.board = [4, 4, 4, 0, 1,
+    #                 0, 0, 6, 1, 4]
+
+    tree = Tree(state0, core_agent=RandomAgent(), fast_agent=SimpleAgent(), player_id=player)
+
+    tree.search(n_rollouts)
+    policy, value = tree.get_policy_and_value()
+
+    print()
+    print('n_visits =', tree.root.visits)
+    print('p =', policy)
+    print(f'v = {value:.3f}')
+    print()
     print(tree)
+    print()
+    print('n_visits =', tree.root.visits)
+    print('p =', policy)
+    print(f'v = {value:.3f}')
 
 
-def test_game(board_size=3, stones=1, komi=.5):
+def test_game(board_size=3, stones=2, komi=.5):
     # agent_1 = RandomAgent()
-    agent_1 = TreeAgent(RandomAgent(), n_rollouts=50)
+    agent_2 = TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100)
     # agent_1 = SimpleAgent()
-    agent_2 = RandomAgent()
+    agent_1 = HumanAgent()
 
     game = Game(board_size=board_size, stones=stones, komi=komi)
     game.play(agent_1, agent_2)
-    print(game)
+
+    # print(game)
     print(game.outcome)
 
 
-def test_elo(board_size=3, stones=1, komi=.5, t=2.):
-    agent_1 = TreeAgent(RandomAgent(), n_rollouts=100)
-    # agent_1 = SimpleAgent()
-    agent_2 = RandomAgent()
+def test_elo(board_size=4, stones=3, komi=1.5, t=1.):
+    agent_1 = TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=200)
+    agent_2 = TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100)
+    # agent_2 = SimpleAgent()
+    # agent_2 = RandomAgent()
 
     gen = compute_elo(agent_1, agent_2,
                       board_size=board_size, stones=stones, komi=komi)
@@ -93,8 +122,14 @@ def test_elo(board_size=3, stones=1, komi=.5, t=2.):
 
 if __name__ == '__main__':
     from random import seed
-    seed(0)
+    seed(1)
+
+    # for n_ in range(5, 20):
+    #     print('\n' * 20)
+    #     print(2**n_, '\n')
+    #     test_trees(n_rollouts=2**n_)
+    #     input()
 
     test_trees()
-    # test_game(board_size=3, stones=1, komi=.5)
+    # test_game()
     # test_elo()

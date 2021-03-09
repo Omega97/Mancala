@@ -1,4 +1,5 @@
 from random import random
+from time import time
 
 
 def i_print(itr, n=-1):
@@ -7,6 +8,15 @@ def i_print(itr, n=-1):
             break
         print(x)
     print()
+
+
+def yield_periodically(itr, period):
+    """yield periodically, only after "period" of time"""
+    t = time()
+    for i in itr:
+        if time() - t > period:
+            t += period
+            yield i
 
 
 def mancala_gen(start, n_stones, board_size):

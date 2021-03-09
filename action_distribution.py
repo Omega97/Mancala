@@ -18,7 +18,8 @@ class ActionDistribution:
         return len(self.v)
 
     def __repr__(self):
-        return str(self.v)
+        v = self.v / self.norm()
+        return '[' + '  '.join(f'{i:.3f}' for i in v) + ']'
 
     def __mul__(self, other):
         assert len(self) == len(other)
@@ -48,11 +49,14 @@ class ActionDistribution:
         k = 1 -> keep max
         :param k: float (0., 1.)
         """
-        if k < 0 or k >= 1:
-            raise ValueError
-        x = max(self.v) * k
-        new_v = [(i-x) if (i-x) > 0 else 0. for i in self.v]
-        return ActionDistribution(new_v)
+        if k <= 0:
+            return self
+        elif k >= 1:
+            return one_hot(np.argmax(self.v), len(self))
+        else:
+            x = max(self.v) * k
+            new_v = [(i-x) if (i-x) > 0 else 0. for i in self.v]
+            return ActionDistribution(new_v)
 
     def get_non_zero(self):
         return tuple(i for i in range(len(self.v)) if self.v[i])
