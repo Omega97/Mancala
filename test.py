@@ -98,26 +98,27 @@ def test_trees_exp(expectation: int, board=None, board_size=3, stones=1, komi=.5
         print('\n')
 
 
-def test_game(board_size=6, stones=4, komi=.5, n_rollouts=1000):
+def test_game(board_size=6, stones=4, komi=.5, n_rollouts=100, show=True):
     agents = []
-    agents += [HumanAgent()]
     agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=n_rollouts)]
+    agents += [SimpleAgent()]
 
-    game = Game(board_size=board_size, stones=stones, komi=komi, show=True)
+    game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
     game.play(*agents)
 
 
 def test_elo(board_size=6, stones=4, komi=.5, t=1.):
     agents = []
-    agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=1000)]
-    # agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=50)]
+    agents += [TreeAgent(RandomAgent(), RandomAgent(), n_rollouts=100)]
     agents += [SimpleAgent()]
 
-    gen = compute_elo(*agents, board_size=board_size, stones=stones, komi=komi, show=True)
+    print('Computing...\n')
+    gen = compute_elo(*agents, board_size=board_size, stones=stones, komi=komi, show=False)
     gen = yield_periodically(gen, t)
     for w0, w1, w, s, n in gen:
+        print()
         print(f'{w0:+8.0f} {w1:+8.0f} {w:+8.0f} \t ({s} / {n})')
-        print('\n')
+        print()
 
 
 def exercises():
@@ -133,10 +134,23 @@ def exercises():
     test_trees_exp(expectation=2, board=[3, 1, 0, 0, 3, 1, 2, 1], player=1, komi=-.5)
 
 
+def test_time(n_rollouts=30):
+    from time import time
+    from random import seed
+    import numpy as np
+
+    v = []
+
+    while True:
+        seed(0)
+        t = time()
+        test_game(show=False, n_rollouts=n_rollouts)
+        v += [time()-t]
+        print(f'{np.average(v):10.3f}')
+        print(f'{np.std(v):10.3f}')
+        print()
+
+
 if __name__ == '__main__':
-
-    # test_trees(board_size=4, stones=3, n_rollouts=2000)
-
-    # test_game()
 
     test_elo()
