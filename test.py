@@ -98,10 +98,10 @@ def test_trees_exp(expectation: int, board=None, board_size=3, stones=1, komi=.5
         print('\n')
 
 
-def test_game(board_size=5, stones=3, komi=.5, n_rollouts=30):
+def test_game(board_size=6, stones=4, komi=.5, n_rollouts=1000):
     agents = []
+    agents += [HumanAgent()]
     agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=n_rollouts)]
-    agents += [SimpleAgent()]
 
     game = Game(board_size=board_size, stones=stones, komi=komi, show=True)
     game.play(*agents)
@@ -109,9 +109,9 @@ def test_game(board_size=5, stones=3, komi=.5, n_rollouts=30):
 
 def test_elo(board_size=6, stones=4, komi=.5, t=1.):
     agents = []
-    agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=50)]
+    agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=1000)]
     # agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=50)]
-    agents += [RandomAgent()]
+    agents += [SimpleAgent()]
 
     gen = compute_elo(*agents, board_size=board_size, stones=stones, komi=komi, show=True)
     gen = yield_periodically(gen, t)
