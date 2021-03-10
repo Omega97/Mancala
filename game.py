@@ -69,7 +69,8 @@ class State:
         return v + [self.player]
 
     def __repr__(self, space_1=1, space_2=2):
-        s = '>' if self.player else '<'
+        s = ' '
+        s += '>' if self.player else '<'
         s += '   '
         n = self.board_size
         for i in self.board[:n]:
@@ -83,7 +84,7 @@ class State:
 
 class Game:
 
-    def __init__(self, state=None, board_size=6, stones=4, komi=.5):
+    def __init__(self, state=None, board_size=6, stones=4, komi=.5, show=False):
         self.state = state
         self.board_size = board_size
         self.stones = stones
@@ -92,24 +93,18 @@ class Game:
         self.outcome = None
         self.values = []    # record of subjective expectation of result
         self.players = []   # record of who was on duty
+        self.show = show
 
     def save_info(self, value):
         self.players += [self.state.player]
         self.kifu += [self.state]
         self.values += [value]
 
-    def play(self, *players):
-
-        # initialize state
-        if self.state is None:
-            self.state = State(board_size=self.board_size, stones=self.stones, komi=self.komi)
-
-        # activate bots
-        for i, p in enumerate(players):
-            p.open(self.state, player_id=i)
-
-        # game loop
+    def game_loop(self, players):
         while not self.state.is_game_over():
+            if self.show:
+                print(self.state)
+
             # get move from current player
             policy, value = players[self.state.player].get_move(self.state)
             policy *= self.state.legal_moves()  # filter out illegal moves
@@ -122,12 +117,42 @@ class Game:
             self.save_info(value)   # before performing the move
             self.state = self.state.make_move(move)
 
+    def play(self, *players):
+
+        if self.show:
+            print('\n')
+            print(f' < {players[0]}')
+            print(f' > {players[1]}')
+            print()
+
+        # initialize state
+        if self.state is None:
+            self.state = State(board_size=self.board_size, stones=self.stones, komi=self.komi)
+
+        # activate bots
+        for i, p in enumerate(players):
+            p.open(self.state, player_id=i)
+
+        # game loop
+        self.game_loop(players)
+
         self.outcome = self.state.result()
 
         for p in players:
             p.close(self.state, self.outcome)
 
         self.save_info(self.outcome)
+
+        if self.show:
+            if self.show:
+                print(self.state)
+            print()
+            if self.outcome == 1:
+                print(' < wins')
+            elif self.outcome == 0:
+                print(' > wins')
+            print('\n')
+
         return self.outcome
 
     def congrats(self):
@@ -161,7 +186,7 @@ class Game:
         return data
 
 
-def compute_elo(agent_1, agent_2, board_size, stones, komi):
+def compute_elo(agent_1, agent_2, board_size, stones, komi, show=True):
 
     def elo(n_games, n_wins, c_elo=1/400):
         score = (n_wins + 1) / (n_games + 2)
@@ -170,14 +195,14 @@ def compute_elo(agent_1, agent_2, board_size, stones, komi):
     n0 = w0 = n1 = w1 = 0
 
     while True:
-        game = Game(board_size=board_size, stones=stones, komi=komi)
+        game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
         game.play(agent_1, agent_2)
         n0 += 1
         w0 += game.outcome
 
-        game = Game(board_size=board_size, stones=stones, komi=komi)
+        game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
         game.play(agent_2, agent_1)
         n1 += 1
         w1 += 1 - game.outcome
 
-        yield elo(n0, w0), elo(n1, w1), elo(n0 + n1, w0+w1)
+        yield elo(n0, w0), elo(n1, w1), elo(n0 + n1, w0+w1), w0+w1, n0+n1

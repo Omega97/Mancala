@@ -23,6 +23,8 @@ class Agent:    # todo filter illegal moves here?
     def __call__(self, state):
         return self.get_move(state)
 
+    def __repr__(self):
+        return 'unknown agent'
 
 # ----- BOTS ----- #
 
@@ -33,6 +35,9 @@ class RandomAgent(Agent):
     def get_move(self, state):
         v = [1 for _ in range(state.board_size)]
         return ActionDistribution(v), .5
+
+    def __repr__(self):
+        return 'RandomAgent'
 
 
 class SimpleAgent(Agent):
@@ -53,6 +58,9 @@ class SimpleAgent(Agent):
         value = ((tanh(value / self.k_value) + 1) / 2)
         v = [(n - i + self.x1) * self.m1 if n - i == v[i] else (i + self.x2) * self.m2 for i in range(n)]
         return ActionDistribution(v), value
+
+    def __repr__(self):
+        return 'SimpleAgent'
 
 
 class HumanAgent(Agent):
@@ -80,35 +88,35 @@ class HumanAgent(Agent):
         print(state)
         print('\n')
 
+    def __repr__(self):
+        return 'Human'
+
 
 class TreeAgent(Agent):
-    """"""
-    def __init__(self, core_agent, fast_agent, n_rollouts):
+    """ use the Monte-Carlo tree-search
+    - use core_agent for the policy
+    - use fast agent to do the roll-outs
+
+    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=500) --> Elo = 2700(150)
+    """
+    def __init__(self, core_agent, fast_agent, n_rollouts, k_focus=.99):
         self.tree = None
         self.core_agent = core_agent
         self.fast_agent = fast_agent
         self.n_rollouts = n_rollouts
+        self.k_focus = k_focus
 
     def open(self, initial_state, player_id):
-        self.tree = Tree(initial_state, self.core_agent, self.fast_agent, player_id)
+        self.tree = Tree(initial_state, self.core_agent, self.fast_agent, player_id, k_focus=self.k_focus)
         self.tree.search(n_rollouts=self.n_rollouts)
-
-
-        policy, value = self.tree.get_policy_and_value()
-        print(' ' * 50, policy, f' {value:.3f}')
 
     def set_move(self, move: ActionDistribution):
         n = move.get_non_zero()[0]
         self.tree.re_plant(n)
 
-
-        if not self.tree.root.state.is_game_over():
-            policy, value = self.tree.get_policy_and_value()
-            print(' ' * 50, policy, f' {value:.3f}')
-
-
     def get_move(self, state):
         self.tree.search(n_rollouts=self.n_rollouts)
-        policy, value = self.tree.get_policy_and_value()
+        return self.tree.get_policy_and_value()
 
-        return policy, value
+    def __repr__(self):
+        return f'TreeAgent({self.core_agent}, {self.fast_agent}, {self.n_rollouts}, k={self.k_focus:.3f})'

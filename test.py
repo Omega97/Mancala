@@ -78,14 +78,14 @@ def test_trees(board=None, board_size=3, stones=1, komi=.5, player=0, n_rollouts
     print('\n')
 
 
-def test_trees_exp(expectation: int, board=None, board_size=3, stones=1, komi=.5, player=0, n_rollouts=200):
+def test_trees_exp(expectation: int, board=None, board_size=3, stones=1, komi=.5, player=0, n_rollouts=30):
 
     state0 = State(board_size=board_size, stones=stones, komi=komi, player=player)
 
     if board is not None:
         state0.board = board
 
-    tree = Tree(state0, core_agent=RandomAgent(), fast_agent=SimpleAgent(), player_id=player)
+    tree = Tree(state0, core_agent=SimpleAgent(), fast_agent=SimpleAgent(), player_id=player)
 
     tree.search(n_rollouts)
     policy, value = tree.get_policy_and_value()
@@ -97,73 +97,46 @@ def test_trees_exp(expectation: int, board=None, board_size=3, stones=1, komi=.5
         print('p =', policy)
         print('\n')
 
-        # print('\n')
-        # print('n_visits =', tree.root.visits)
-        # print('p =', policy)
-        # print(f'v = {value:.3f}')
-        # print()
-        # print(tree)
-        # print()
-        # print('n_visits =', tree.root.visits)
-        # print('p =', policy)
-        # print(f'v = {value:.3f}')
-        # print('\n')
-        # input()
+
+def test_game(board_size=5, stones=3, komi=.5, n_rollouts=30):
+    agents = []
+    agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=n_rollouts)]
+    agents += [SimpleAgent()]
+
+    game = Game(board_size=board_size, stones=stones, komi=komi, show=True)
+    game.play(*agents)
 
 
-def test_game(board_size=4, stones=3, komi=.5):
-    # agent_1 = RandomAgent()
-    agent_2 = TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100)
-    # agent_1 = SimpleAgent()
-    agent_1 = HumanAgent()
+def test_elo(board_size=6, stones=4, komi=.5, t=1.):
+    agents = []
+    agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=50)]
+    # agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=50)]
+    agents += [RandomAgent()]
 
-    game = Game(board_size=board_size, stones=stones, komi=komi)
-    game.play(agent_1, agent_2)
-
-    # print(game)
-    print(game.outcome)
-
-
-def test_elo(board_size=4, stones=3, komi=1.5, t=1.):
-    agent_1 = TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=200)
-    agent_2 = TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100)
-    # agent_2 = SimpleAgent()
-    # agent_2 = RandomAgent()
-
-    gen = compute_elo(agent_1, agent_2,
-                      board_size=board_size, stones=stones, komi=komi)
+    gen = compute_elo(*agents, board_size=board_size, stones=stones, komi=komi, show=True)
     gen = yield_periodically(gen, t)
-    for i in gen:
-        print(''.join([f'{j:+8.0f}' for j in i]))
+    for w0, w1, w, s, n in gen:
+        print(f'{w0:+8.0f} {w1:+8.0f} {w:+8.0f} \t ({s} / {n})')
+        print('\n')
+
+
+def exercises():
+    """shows the exercises that have not been solved correctly"""
+    test_trees_exp(expectation=2, board=[3, 1, 1, 0, 0, 0, 1, 4], player=0)
+    test_trees_exp(expectation=2, board=[3, 1, 1, 0, 0, 1, 1, 4], player=0)
+    test_trees_exp(expectation=0, board=[3, 1, 0, 0, 1, 1, 1, 3], player=0)
+    test_trees_exp(expectation=2, board=[3, 1, 2, 1, 3, 1, 0, 0], player=0)
+
+    test_trees_exp(expectation=2, board=[0, 0, 1, 4, 3, 1, 1, 0], player=1, komi=-.5)
+    test_trees_exp(expectation=2, board=[3, 1, 1, 0, 0, 1, 1, 4], player=1, komi=-.5)
+    test_trees_exp(expectation=0, board=[1, 1, 1, 3, 3, 1, 0, 0], player=1, komi=-.5)
+    test_trees_exp(expectation=2, board=[3, 1, 0, 0, 3, 1, 2, 1], player=1, komi=-.5)
 
 
 if __name__ == '__main__':
-    from random import seed
-    seed(1)
-
-    # for n_ in range(5, 20):
-    #     print('\n' * 20)
-    #     print(2**n_, '\n')
-    #     test_trees(n_rollouts=2**n_)
-    #     input()
-
-    # test_trees(board=[0, 3, 0, 3, 0, 0, 1, 5], komi=-.5, player=0)
-    # test_trees(board=[0, 0, 1, 5, 0, 3, 0, 3], komi=+.5, player=1)
-
-
-    # test_trees_exp(expectation=2, board=[3, 1, 1, 0, 0, 0, 1, 4], player=0)
-    # test_trees_exp(expectation=2, board=[3, 1, 1, 0, 0, 1, 1, 4], player=0)
-    # test_trees_exp(expectation=0, board=[3, 1, 0, 0, 1, 1, 1, 3], player=0)
-    # test_trees_exp(expectation=2, board=[3, 1, 2, 1, 3, 1, 0, 0], player=0)
-    #
-    # test_trees_exp(expectation=2, board=[0, 0, 1, 4, 3, 1, 1, 0], player=1, komi=-.5)
-    # test_trees_exp(expectation=2, board=[3, 1, 1, 0, 0, 1, 1, 4], player=1, komi=-.5)
-    # test_trees_exp(expectation=0, board=[1, 1, 1, 3, 3, 1, 0, 0], player=1, komi=-.5)
-    # test_trees_exp(expectation=2, board=[3, 1, 0, 0, 3, 1, 2, 1], player=1, komi=-.5)
-
 
     # test_trees(board_size=4, stones=3, n_rollouts=2000)
 
-    test_game()
+    # test_game()
 
-    # test_elo()
+    test_elo()
