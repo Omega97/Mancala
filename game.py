@@ -170,8 +170,8 @@ class Game:
         for p in players:
             p.close(self.state, self.outcome)
 
-    def play(self, *players):
-
+    def play(self, players):
+        assert len(players) == 2
         self._print_title(players)
         self._init_state()
         self._activate_bots(players)
@@ -180,7 +180,6 @@ class Game:
         self._close_bots(players)
         self.save_info(self.outcome)
         self._print_ending()
-
         return self.outcome
 
     def congrats(self):
@@ -224,25 +223,46 @@ class Game:
         return data
 
 
-def compute_elo(agents, board_size, stones, komi, show=True):
+def compute_elo(agents, board_size, stones, komi, show=True,
+                n_won_sente=0, n_lost_sente=0, n_won_gote=0, n_lost_gote=0):
 
     assert len(agents) == 2
 
-    def elo(n_games, n_wins, c_elo=1/400):
-        score = (n_wins + 1) / (n_games + 2)
+    def elo(n_won, n_lost, c_elo=1/400):
+        score = (n_won + 1) / (n_won + n_lost + 2)
         return -log(1 / score - 1) / c_elo
 
-    n0 = w0 = n1 = w1 = 0
+    def gen(w_0, l_0, w_1, l_1):
+        while True:
+            game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
+            game.play(*agents)
 
-    while True:
-        game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
-        game.play(*agents)
-        n0 += 1
-        w0 += game.outcome
+            if game.outcome == 1:
+                w_0 += 1
+            elif game.outcome == 0:
+                l_0 += 1
 
-        game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
-        game.play(*reversed(agents))
-        n1 += 1
-        w1 += 1 - game.outcome
+            yield w_0, l_0, w_1, l_1
 
-        yield elo(n0, w0), elo(n1, w1), elo(n0 + n1, w0 + w1), w0 + w1, n0 + n1
+            game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
+            game.play(*reversed(agents))
+
+            if game.outcome == 1:
+                l_1 += 1
+            elif game.outcome == 0:
+                w_1 += 1
+
+            yield w_0, l_0, w_1, l_1
+
+    for w0, l0, w1, l1 in gen(n_won_sente, n_lost_sente, n_won_gote, n_lost_gote):
+
+        yield {'n_won_sente': w0,
+               'n_lost_sente': l0,
+               'elo_sente': elo(w0, l0),
+               'n_won_gote': w1,
+               'n_lost_gote': l1,
+               'elo_gote': elo(w1, l1),
+               'n_won': w0 + w1,
+               'n_lost': l0 + l1,
+               'elo': elo(w0 + w1, l0 + l1),
+               }

@@ -25,13 +25,14 @@ def test_copy(board_size=3):
 
 def test_kifu(board_size=6, stones=4, komi=.5, k_edit=3.):
     agents = []
-    agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=200)]
-    agents += [TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=800)]
-    # agents += [SimpleAgent()]
+    # agents += [HumanAgent()]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100)]
+    # agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=200)]
+    agents += [SimpleAgent()]
     # agents += [RandomAgent()]
 
     game = Game(board_size=board_size, stones=stones, komi=komi, do_record=True, show=True)
-    game.play(*agents)
+    game.play(agents)
 
     data00 = game.get_player_data(0)
     data01 = game.get_player_data(1)
@@ -41,8 +42,8 @@ def test_kifu(board_size=6, stones=4, komi=.5, k_edit=3.):
     x0_ = [i.n_moves for i in data00['kifu']]
     x1_ = [i.n_moves for i in data01['kifu']]
 
-    i_print(zip(data00['kifu'], data00['values']))
-    i_print(zip(data01['kifu'], data01['values']))
+    # i_print(zip(data00['kifu'], data00['values']))
+    # i_print(zip(data01['kifu'], data01['values']))
 
     fig, ax = plt.subplots(2)
     ax[0].plot(x0_, data00['values'])
@@ -109,15 +110,16 @@ def test_trees_exp(sol: tuple, board=None, board_size=3, stones=1, komi=.5, play
     return policy.argmax() in sol
 
 
-def test_game(board_size=6, stones=4, komi=.5, n_rollouts=50, show=True):
+def test_game(board_size=6, stones=4, komi=.5, n_rollouts=100, show=True):
     agents = []
     agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=n_rollouts)]
-    agents += [RandomAgent()]
+    agents += [SimpleAgent()]
+    # agents += [RandomAgent()]
     # agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=n_rollouts)]
     # agents += [HumanAgent()]
 
     game = Game(state=None, board_size=board_size, stones=stones, komi=komi, show=show)
-    game.play(*agents)
+    game.play(agents)
 
 
 def test_game_from_position(board, board_size, komi=.5, n_rollouts=100, player=0):
@@ -128,23 +130,24 @@ def test_game_from_position(board, board_size, komi=.5, n_rollouts=100, player=0
 
     state = State(board=board, board_size=board_size, stones=1, komi=komi, player=player)
     game = Game(state=state, board_size=board_size, stones=1, komi=komi, show=True)
-    game.play(*agents)
+    game.play(agents)
     print(game)
 
 
-def test_elo(board_size=6, stones=4, komi=.5, t=1., show_game=True):
+def test_elo(board_size=6, stones=4, komi=.5, t=1., show_game=False):
     agents = []
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=500, k_priority=1.5)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=1000, k_priority=1.5)]
     agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_priority=1.5)]
+    # agents += [RandomAgent()]
     # agents += [SimpleAgent()]
 
     print('Computing...\n')
     gen = compute_elo(agents, board_size=board_size, stones=stones, komi=komi, show=show_game)
     gen = yield_periodically(gen, t)
-    for w0, w1, w, s, n in gen:
-        print()
-        print(f'{w0:+8.0f} {w1:+8.0f} {w:+8.0f} \t ({s} / {n})')
-        print()
+    for d in gen:
+        print(f'{d["n_won_sente"]:6} | {d["n_lost_sente"]:<6} {d["elo_sente"]:<+12.0f}'
+              f'{d["n_won_gote"]:6} | {d["n_lost_gote"]:<6}  {d["elo_gote"]:<+12.0f}'
+              f'{d["n_won"]:6} | {d["n_lost"]:<6} {d["elo"]:<+12.0f}')
 
 
 def exercises(n_rollouts=100):
@@ -214,11 +217,11 @@ if __name__ == '__main__':
 
     # test_game()
     # test_time()
-    # test_kifu()
+    test_kifu()
 
     # test_game_from_position(board=[0, 0, 0, 0, 2, 1, 2,
     #                                0, 0, 0, 3, 1, 1, 0],
     #                         board_size=6, player=0,
     #                         n_rollouts=300)
 
-    test_elo()
+    # test_elo()
