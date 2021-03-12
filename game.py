@@ -3,19 +3,24 @@ from utils import *
 from copy import copy
 from math import log
 
+# todo if resign -> update state outcome
+
 
 class State:
 
-    def __init__(self, board_size, stones, komi, board=None, player=0, n_moves=0):
+    def __init__(self, stones, board_size=None, komi=.5, board=None, player=0, n_moves=0):
         self.board_size = board_size
         self.stones = stones
         self.komi = komi    # komi is subtracted to sente
         self.board = board  # 2 2 2 0 2 2 2 0
         self.player = player
         self.n_moves = n_moves
+        self.outcome = None
 
         if self.board is None:
             self.set_initial_state()
+        else:
+            self.board_size = len(self.board) // 2 - 1
 
     def __copy__(self):
         return State(board_size=self.board_size, stones=self.stones,
@@ -54,8 +59,10 @@ class State:
         return self.legal_moves().norm() == 0
 
     def result(self):
-        if self.is_game_over():
-            return step(self.board[self.board_size] - self.board[self.board_size * 2 + 1] - self.komi)
+        if self.outcome is None:
+            if self.is_game_over():
+                self.outcome = step(self.board[self.board_size] - self.board[self.board_size * 2 + 1] - self.komi)
+        return self.outcome
 
     def representation(self) -> list:
         """representation is how bots should view the game state
@@ -69,8 +76,10 @@ class State:
         return v + [self.player]
 
     def __repr__(self, space_1=1, space_2=2):
-        s = ' '
-        s += '>' if self.player else '<'
+        s = ''
+        s += f'{self.n_moves:3})'
+        s += ' ' * 5
+        s += ' >' if self.player else '< '
         s += '   '
         n = self.board_size
         for i in self.board[:n]:
@@ -84,21 +93,34 @@ class State:
 
 class Game:
 
-    def __init__(self, state=None, board_size=6, stones=4, komi=.5, show=False):
+    def __init__(self, state=None, board_size=6, stones=4, komi=.5, show=False, do_record=False):
+
+        # data
         self.state = state
+        self.outcome = None
+        self.kifu = []
+        self.values = []  # record of subjective expectation of result
+        self.players = []  # record of who was on duty
+
+        # settings
         self.board_size = board_size
         self.stones = stones
         self.komi = komi
-        self.kifu = []
-        self.outcome = None
-        self.values = []    # record of subjective expectation of result
-        self.players = []   # record of who was on duty
         self.show = show
+        self.do_record = do_record
 
     def save_info(self, value):
-        self.players += [self.state.player]
-        self.kifu += [self.state]
-        self.values += [value]
+        if self.do_record:
+            self.players += [self.state.player]
+            self.kifu += [self.state]
+            self.values += [value]
+
+    def reset(self):
+        self.state = None
+        self.outcome = None
+        self.kifu = []
+        self.values = []
+        self.players = []
 
     def game_loop(self, players):
         while not self.state.is_game_over():
@@ -114,44 +136,50 @@ class Game:
             for p in players:
                 p.set_move(move)
 
-            self.save_info(value)   # before performing the move
+            if self.do_record:
+                self.save_info(value)   # before performing the move
+
             self.state = self.state.make_move(move)
 
-    def play(self, *players):
-
+    def _print_title(self, players):
         if self.show:
             print('\n')
             print(f' < {players[0]}')
             print(f' > {players[1]}')
             print()
 
-        # initialize state
+    def _print_ending(self):
+        if self.show:
+            print(self.state)
+            print()
+            if self.outcome == 1:
+                print(' <  wins')
+            elif self.outcome == 0:
+                print('  > wins')
+            print('\n')
+
+    def _init_state(self):
         if self.state is None:
             self.state = State(board_size=self.board_size, stones=self.stones, komi=self.komi)
 
-        # activate bots
+    def _activate_bots(self, players):
         for i, p in enumerate(players):
             p.open(self.state, player_id=i)
 
-        # game loop
-        self.game_loop(players)
-
-        self.outcome = self.state.result()
-
+    def _close_bots(self, players):
         for p in players:
             p.close(self.state, self.outcome)
 
-        self.save_info(self.outcome)
+    def play(self, *players):
 
-        if self.show:
-            if self.show:
-                print(self.state)
-            print()
-            if self.outcome == 1:
-                print(' < wins')
-            elif self.outcome == 0:
-                print(' > wins')
-            print('\n')
+        self._print_title(players)
+        self._init_state()
+        self._activate_bots(players)
+        self.game_loop(players)
+        self.outcome = self.state.result()
+        self._close_bots(players)
+        self.save_info(self.outcome)
+        self._print_ending()
 
         return self.outcome
 
@@ -172,13 +200,23 @@ class Game:
         return len(self.kifu)
 
     def get_player_data(self, player):
-        kifu = [self.kifu[i] for i in range(len(self) - 1) if self.players[i] == player]
-        kifu += [self.kifu[len(self) - 1]]
-        values = [self.values[i] for i in range(len(self) - 1) if self.players[i] == player]
-        values += [self.values[len(self) - 1]]
-        if player == 1:
-            values = [1-i for i in values]
-        return {'kifu': kifu, 'values': values}
+        """collect data relevant to a player, assuming game over or resignation"""
+        if len(self.kifu) == 0:
+            raise ValueError('No data collected!')
+
+        kifu = [s for s in self.kifu if (s.player == player or s.outcome is not None)]
+
+        n_moves = [i.n_moves for i in kifu]
+        players = [i.player for i in kifu]
+        values = [self.values[i] for i in n_moves]
+
+        outcome = kifu[-1].result()
+        if outcome is not None:
+            if player == 1:
+                outcome = 1 - outcome     # <<<
+            values[-1] = outcome
+
+        return {'kifu': kifu, 'values': values, 'players': players, 'n_moves': n_moves}
 
     def get_edited_player_data(self, player, k):
         data = self.get_player_data(player)
@@ -186,7 +224,9 @@ class Game:
         return data
 
 
-def compute_elo(agent_1, agent_2, board_size, stones, komi, show=True):
+def compute_elo(agents, board_size, stones, komi, show=True):
+
+    assert len(agents) == 2
 
     def elo(n_games, n_wins, c_elo=1/400):
         score = (n_wins + 1) / (n_games + 2)
@@ -196,13 +236,13 @@ def compute_elo(agent_1, agent_2, board_size, stones, komi, show=True):
 
     while True:
         game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
-        game.play(agent_1, agent_2)
+        game.play(*agents)
         n0 += 1
         w0 += game.outcome
 
         game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
-        game.play(agent_2, agent_1)
+        game.play(*reversed(agents))
         n1 += 1
         w1 += 1 - game.outcome
 
-        yield elo(n0, w0), elo(n1, w1), elo(n0 + n1, w0+w1), w0+w1, n0+n1
+        yield elo(n0, w0), elo(n1, w1), elo(n0 + n1, w0 + w1), w0 + w1, n0 + n1

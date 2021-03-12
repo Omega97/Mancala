@@ -103,17 +103,20 @@ class TreeAgent(Agent):
     - use core_agent for the policy
     - use fast agent to do the roll-outs
 
-    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=500) --> Elo = 2700(150)
+    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100) --> Elo = 2600(100)
+    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100) --> Elo = 3000(200)
     """
-    def __init__(self, core_agent, fast_agent, n_rollouts, k_focus=.99):
+    def __init__(self, core_agent, fast_agent, n_rollouts, k_focus=1., k_priority=1.5):
         self.tree = None
         self.core_agent = core_agent
         self.fast_agent = fast_agent
         self.n_rollouts = n_rollouts
         self.k_focus = k_focus
+        self.k_priority = k_priority
 
     def open(self, initial_state, player_id):
-        self.tree = Tree(initial_state, self.core_agent, self.fast_agent, player_id, k_focus=self.k_focus)
+        self.tree = Tree(initial_state, self.core_agent, self.fast_agent, player_id,
+                         k_focus=self.k_focus, k_priority=self.k_priority)
         self.tree.search(n_rollouts=self.n_rollouts)
 
     def set_move(self, move: ActionDistribution):
@@ -125,4 +128,5 @@ class TreeAgent(Agent):
         return self.tree.get_policy_and_value()
 
     def __repr__(self):
-        return f'TreeAgent({self.core_agent}, {self.fast_agent}, {self.n_rollouts}, k={self.k_focus:.3f})'
+        return f'TreeAgent({self.core_agent}, {self.fast_agent}, {self.n_rollouts}, ' \
+            f'k_f={self.k_focus:.3f}, k_p={self.k_priority:.3f})'

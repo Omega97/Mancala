@@ -1,23 +1,24 @@
 from game import Game, State
 from action_distribution import one_hot, ActionDistribution
-from utils import choose
+from utils import *
 from copy import copy
 
 
 class Node:
 
-    def __init__(self, state: State, agent, depth=0, parent=None):
+    def __init__(self, state: State, agent, tree, depth=0, parent=None):
         self.state = state
         self.agent = agent
+        self.tree = tree
         self.policy, self.value = agent(state)
         self.policy *= self.state.legal_moves()
         self.depth = depth
         self.parent = parent
         self.child = dict()
-        self.score = 0
-        self.visits = 0
-        self._n_root_visits = None
-        self._base_depth = None
+        self.wins = 0
+        self.losses = 0
+        self.n_root_visits = None
+        self.base_depth = None
 
     def add_child(self, move_id):
         """check if state already exists"""
@@ -26,38 +27,74 @@ class Node:
 
         move = one_hot(move_id, self.state.board_size)
         state = self.state.make_move(move)
-        new_node = Node(state, agent=self.agent, depth=self.depth + 1, parent=self)
+        new_node = Node(state, agent=self.agent, tree=self.tree, depth=self.depth + 1, parent=self)
         self.child[move_id] = new_node
         return new_node
 
-    def backtracking(self, outcome, player_id):
-        """"""
-        self.visits += 1
+    def get_player(self):
+        return self.state.player
 
+    def get_root_player(self):
+        return self.tree.get_root().state.player
 
+    def get_parent(self):
+        return self.parent
 
-        # self.score += outcome if self.state.player == 0 else 1 - outcome
-        self.score += outcome if player_id == 0 else 1 - outcome
+    def backtracking(self, outcome):
+        """
+        outcome is absolute
+        each node contains:
+        - number of wins of the player of the node
+        - number of losses of the player of the node
+        """
+        # todo check
 
-
+        x = 1 if self.get_player() != outcome else 0
+        self.wins += x
+        self.losses += 1-x
 
         if self.parent is not None:
-            self.parent.backtracking(outcome, player_id)
+            self.parent.backtracking(outcome)
 
-    def expectation(self, player):
+    def get_visits(self):
+        return self.wins + self.losses
+
+    def get_scores_and_visits(self):
+        return self.wins, self.losses, self.wins + self.losses
+
+    def expectation(self):
+        """subjective expectation value of outcome for the root player"""
+        w, l, n = self.get_scores_and_visits()
+
+        player = self.get_player()
+        root_player = self.get_root_player()
+
         outcome = self.outcome()
         if outcome is None:
-            return (self.score + 1) / (self.visits + 2)
+            if player == root_player:
+                return (w + 1) / (n + 2)
+            else:
+                return (l + 1) / (n + 2)
         else:
-            return outcome if player == 0 else 1-outcome
+            return outcome if root_player == 0 else 1 - outcome
 
-    def priority(self):
-        x = self.score
-        n = self.visits
+    def priority(self):     # todo better heuristic
+        """used to choose the sub-node to visit
+        higher if parent node should lead to self
+        """
+        k_p = self.tree.k_priority
 
+        def f(wins, losses):
+            return (wins + 1) / (wins + losses + 2) ** k_p
 
-        return (x+1) / (n+2)**2
-
+        w, l, n = self.get_scores_and_visits()
+        if self.get_parent() is None:
+            return None
+        else:
+            if self.get_parent().get_player() == self.get_player():
+                return f(w, l)
+            else:
+                return f(l, w)
 
     def is_terminal(self):
         return self.state.is_game_over()
@@ -65,22 +102,23 @@ class Node:
     def choose_move_id(self):
         priorities = copy(self.policy.v)
         for i in self.child:
-            priorities[i] = self.child[i].priority()    # todo ??
-        return choose(priorities)
+            priorities[i] = self.child[i].priority()
+        return argmax(priorities)   # todo
 
     def outcome(self):
         return self.state.result()
 
     def __repr__(self, bar_length=40):
-        if self._n_root_visits is None:
-            self._n_root_visits = self.visits
+        w, l, n = self.get_scores_and_visits()
+        if self.n_root_visits is None:
+            self.n_root_visits = n
         for i in self.child:
-            self.child[i]._n_root_visits = self._n_root_visits
+            self.child[i].n_root_visits = self.n_root_visits
 
-        if self._base_depth is None:
-            self._base_depth = self.depth
+        if self.base_depth is None:
+            self.base_depth = self.depth
         for i in self.child:
-            self.child[i]._base_depth = self._base_depth
+            self.child[i].base_depth = self.base_depth
 
         s = ' '
         s += str(self.state)
@@ -94,30 +132,40 @@ class Node:
             s += ' '
         s += ' ' * 4
 
-        n_bar = round(bar_length * self.visits / self._n_root_visits)
+        n_bar = round(bar_length * n / self.n_root_visits)
 
-        n = round(self.expectation(self.state.player) * n_bar)
-        c = '|' + '#' * n + ' ' * (n_bar - n) + '|'
+        p_bar = round(self.expectation() * n_bar)
+
+        c = '|' + '#' * p_bar + ' ' * (n_bar - p_bar) + '|'
 
         s += f'{c:{6 + bar_length}}'
         s += ' ' * 4
-        s += '.  ' * (self.depth - self._base_depth)
-        s += f'{self.score} / {self.visits}'
+        s += '.  ' * (self.depth - self.base_depth)
+
+        if self.get_player() == self.get_root_player():
+            s += f'{w} | {l}'
+        else:
+            s += f'{l} | {w}'
+
         s += '   -   '
-        s += f'{self.expectation(self.state.player):.3f}'
+
+        s += f'{self.expectation():.3f}'
+        if self.priority():
+            s += f'  ({self.priority():.3f})'
+
         for i in self.child:
             s += '\n' + str(self.child[i])
 
-        self._n_root_visits = None
-        self._base_depth = None
+        self.n_root_visits = None
+        self.base_depth = None
 
         return s
 
 
 class Tree:
 
-    def __init__(self, state, core_agent, fast_agent, player_id):
-        self.root = Node(state, core_agent)
+    def __init__(self, state, core_agent, fast_agent, player_id, k_focus=1., k_priority=1.5):
+        self.root = Node(state, core_agent, self)
         self.fast_agent = fast_agent
         self.active_nodes = [self.root]
         self.node_count = 1
@@ -125,9 +173,14 @@ class Tree:
                             'stones': state.stones,
                             'komi': state.komi}
         self.player_id = player_id
+        self.k_focus = k_focus
+        self.k_priority = k_priority
 
     def __repr__(self):
-        return str(self.root)
+        return str(self.get_root())
+
+    def get_root(self) -> Node:
+        return self.root
 
     def pick_node(self, root=None) -> Node:
         """
@@ -136,7 +189,7 @@ class Tree:
         :return:
         """
         if root is None:
-            root = self.root
+            root = self.get_root()
         if root.is_terminal():
             return root
         else:
@@ -151,7 +204,7 @@ class Tree:
 
         for _ in range(n_rollouts):
             # find node
-            node = self.pick_node(self.root)
+            node = self.pick_node(self.get_root())
 
             if node.is_terminal():
 
@@ -159,7 +212,7 @@ class Tree:
                 outcome = node.outcome()
 
                 # update tree
-                node.backtracking(outcome, self.player_id)
+                node.backtracking(outcome)
 
             else:
                 # do rollout
@@ -169,26 +222,26 @@ class Tree:
                 outcome = rollout.outcome
 
                 # update tree
-                node.backtracking(outcome, self.player_id)
+                node.backtracking(outcome)
 
     def get_policy_and_value(self):
+        """use the resulting tree of the search to determine a policy and a value"""
+        if len(self.get_root().child) == 0:
+            return self.get_root().policy, self.get_root().value
 
-        if len(self.root.child) == 0:
-            raise ValueError('Tree has no nodes, perform search first!')
+        v = [1 for _ in self.get_root().policy]
 
-        v = [1 for _ in self.root.policy]
-
-        for i in self.root.child:
-            v[i] = self.root.child[i].visits
+        for i in self.get_root().child:
+            v[i] = self.get_root().child[i].get_visits()
 
         a = ActionDistribution(v)
-        a *= self.root.state.legal_moves()
-        a = a.focus(k=.95)
+        a *= self.get_root().state.legal_moves()
+        a = a.focus(k=self.k_focus)
 
-        return a, self.root.score / self.root.visits
+        return a, self.get_root().expectation()
 
     def re_plant(self, move_id):
-        """"""
-        if move_id not in self.root.child:
-            self.root.add_child(move_id)
-        self.root = self.root.child[move_id]
+        """select ew root for the tree"""
+        if move_id not in self.get_root().child:
+            self.get_root().add_child(move_id)
+        self.root = self.get_root().child[move_id]

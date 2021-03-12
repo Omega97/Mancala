@@ -4,7 +4,7 @@ from time import time
 
 def i_print(itr, n=-1):
     for i, x in enumerate(itr):
-        if i==n:
+        if i == n:
             break
         print(x)
     print()
@@ -72,3 +72,13 @@ def choose(v):
         r -= v[i]
         if r < 0:
             return i
+
+
+def argmax(v):
+    max_ = v[0]
+    index = 0
+    for i, x in enumerate(v[1:]):
+        if x > max_:
+            max_ = x
+            index = i+1
+    return index

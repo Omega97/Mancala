@@ -34,6 +34,9 @@ class ActionDistribution:
     def norm(self):
         return sum(self.v)
 
+    def normalize(self):
+        self.v /= self.norm()
+
     def quick_choose(self) -> int:
         """return an index of a random element using self.v as weights"""
         return choose(self.v)
@@ -68,6 +71,9 @@ class ActionDistribution:
 
     def complementary(self):
         return ActionDistribution([0 if i else 1 for i in self])
+
+    def argmax(self):
+        return int(np.argmax(self.v))
 
 
 def one_hot(i, size):
