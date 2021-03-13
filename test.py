@@ -23,13 +23,12 @@ def test_copy(board_size=3):
     print(s1)
 
 
-def test_kifu(board_size=6, stones=4, komi=.5, k_edit=3.):
+def test_kifu(board_size=4, stones=3, komi=.5, k_edit=3.):
     agents = []
     # agents += [HumanAgent()]
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100)]
-    # agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=200)]
+    # agents += [SimpleAgent()]
     agents += [SimpleAgent()]
-    # agents += [RandomAgent()]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1., heuristic_par=1.5)]
 
     game = Game(board_size=board_size, stones=stones, komi=komi, do_record=True, show=True)
     game.play(agents)
@@ -42,16 +41,24 @@ def test_kifu(board_size=6, stones=4, komi=.5, k_edit=3.):
     x0_ = [i.n_moves for i in data00['kifu']]
     x1_ = [i.n_moves for i in data01['kifu']]
 
-    # i_print(zip(data00['kifu'], data00['values']))
-    # i_print(zip(data01['kifu'], data01['values']))
+    i_print(data10)
+    i_print(data11)
+
+    length = len(game.kifu)
 
     fig, ax = plt.subplots(2)
     ax[0].plot(x0_, data00['values'])
-    ax[0].plot(x0_, data10['values'])
+    ax[0].plot(x0_, [i[1] for i in data10])
+    ax[0].scatter(length-1, data00['outcome'], c='orange')
+    ax[0].set_xlim([0, length])
     ax[0].set_ylim([-.1, 1.1])
+
     ax[1].plot(x1_, data01['values'])
-    ax[1].plot(x1_, data11['values'])
+    ax[1].plot(x1_, [i[1] for i in data11])
+    ax[1].set_xlim([0, length])
     ax[1].set_ylim([-.1, 1.1])
+    ax[1].scatter(length-1, data01['outcome'], c='orange')
+
     plt.show()
 
 
@@ -64,10 +71,10 @@ def test_trees(board=None, board_size=6, stones=4, komi=.5, player=0, n_rollouts
         state0.board = board
 
     tree = Tree(state0, core_agent=RandomAgent(), fast_agent=SimpleAgent(),
-                player_id=player, k_focus=k_focus, k_priority=k_priority)
+                player_id=player, k_focus_decision=k_focus, k_focus_branch=k_priority)
 
     tree.search(n_rollouts)
-    policy, value = tree.get_policy_and_value()
+    policy, value = tree.get_final_policy_and_value()
 
     if show:
         print('\n')
@@ -94,10 +101,10 @@ def test_trees_exp(sol: tuple, board=None, board_size=3, stones=1, komi=.5, play
     if board is not None:
         state0.board = board
 
-    tree = Tree(state0, core_agent=RandomAgent(), fast_agent=SimpleAgent(), player_id=player, k_focus=0)
+    tree = Tree(state0, core_agent=RandomAgent(), fast_agent=SimpleAgent(), player_id=player, k_focus_decision=0)
 
     tree.search(n_rollouts)
-    policy, value = tree.get_policy_and_value()
+    policy, value = tree.get_final_policy_and_value()
 
     if show:
         if policy.argmax() not in sol:
@@ -134,10 +141,10 @@ def test_game_from_position(board, board_size, komi=.5, n_rollouts=100, player=0
     print(game)
 
 
-def test_elo(board_size=6, stones=4, komi=.5, t=1., show_game=False):
+def test_elo(board_size=5, stones=3, komi=.5, t=1., show_game=True):
     agents = []
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=1000, k_priority=1.5)]
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_priority=1.5)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1.5)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1.5)]
     # agents += [RandomAgent()]
     # agents += [SimpleAgent()]
 
@@ -177,9 +184,7 @@ def test_time(n_rollouts=30):
         t = time()
         test_game(show=False, n_rollouts=n_rollouts)
         v += [time()-t]
-        print(f'{np.average(v):10.3f}')
-        print(f'{np.std(v):10.3f}')
-        print()
+        print(f'{np.average(v):10.3f} +- {np.std(v):.3f}')
 
 
 def test_heuristic():
@@ -200,8 +205,8 @@ def test_heuristic():
 
 
 if __name__ == '__main__':
-    # from random import seed
-    # seed(0)
+    from random import seed
+    seed(0)
 
     # test_trees([0, 0, 0, 0, 3, 0, 0,
     #             0, 0, 0, 0, 2, 1, 0], player=0, n_rollouts=500)

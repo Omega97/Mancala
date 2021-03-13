@@ -46,6 +46,14 @@ class ActionDistribution:
         index = self.quick_choose()
         return one_hot(index, len(self))
 
+    def argmax(self):
+        return int(np.argmax(self.v))
+
+    def keep_max(self):
+        """all elements become 0 except max becomes 1"""
+        i = self.argmax()
+        return one_hot(i, len(self))
+
     def focus(self, k):
         """
         k = 0 -> don't change
@@ -55,7 +63,7 @@ class ActionDistribution:
         if k <= 0:
             return self
         elif k >= 1:
-            return one_hot(np.argmax(self.v), len(self))
+            return self.keep_max()
         else:
             x = max(self.v) * k
             new_v = [(i-x) if (i-x) > 0 else 0. for i in self.v]
@@ -71,9 +79,6 @@ class ActionDistribution:
 
     def complementary(self):
         return ActionDistribution([0 if i else 1 for i in self])
-
-    def argmax(self):
-        return int(np.argmax(self.v))
 
 
 def one_hot(i, size):

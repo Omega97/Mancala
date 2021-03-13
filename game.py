@@ -58,11 +58,14 @@ class State:
     def is_game_over(self):
         return self.legal_moves().norm() == 0
 
-    def result(self):
+    def get_result(self):
         if self.outcome is None:
             if self.is_game_over():
                 self.outcome = step(self.board[self.board_size] - self.board[self.board_size * 2 + 1] - self.komi)
         return self.outcome
+
+    def get_subjective_result(self):
+        return self.outcome if self.player == 0 else 1 - self.outcome
 
     def representation(self) -> list:
         """representation is how bots should view the game state
@@ -176,9 +179,9 @@ class Game:
         self._init_state()
         self._activate_bots(players)
         self.game_loop(players)
-        self.outcome = self.state.result()
+        self.outcome = self.state.get_result()
         self._close_bots(players)
-        self.save_info(self.outcome)
+        self.save_info(self.state.get_subjective_result())
         self._print_ending()
         return self.outcome
 
@@ -199,28 +202,32 @@ class Game:
         return len(self.kifu)
 
     def get_player_data(self, player):
-        """collect data relevant to a player, assuming game over or resignation"""
+        """collect subjective data relevant to one player, assuming game over or resignation"""
         if len(self.kifu) == 0:
             raise ValueError('No data collected!')
 
-        kifu = [s for s in self.kifu if (s.player == player or s.outcome is not None)]
+        kifu = [s for s in self.kifu if s.player == player]
 
         n_moves = [i.n_moves for i in kifu]
         players = [i.player for i in kifu]
         values = [self.values[i] for i in n_moves]
 
-        outcome = kifu[-1].result()
-        if outcome is not None:
+        outcome = self.outcome
+        if self.outcome is not None:
             if player == 1:
-                outcome = 1 - outcome     # <<<
-            values[-1] = outcome
+                outcome = 1 - outcome
 
-        return {'kifu': kifu, 'values': values, 'players': players, 'n_moves': n_moves}
+        state_repr = [i.representation() for i in kifu]
+
+        return {'kifu': kifu, 'values': values, 'players': players,
+                'n_moves': n_moves, 'state_repr': state_repr, 'outcome': outcome}
 
     def get_edited_player_data(self, player, k):
+        """data ready for training"""
         data = self.get_player_data(player)
-        data['values'] = adjust_values(data['values'], k=k)
-        return data
+        assert data['outcome'] is not None
+        values = adjust_values(data['values'], target=data['outcome'], k=k)
+        return tuple((data['state_repr'][i], values[i]) for i in range(len(values)))
 
 
 def compute_elo(agents, board_size, stones, komi, show=True,
@@ -235,7 +242,7 @@ def compute_elo(agents, board_size, stones, komi, show=True,
     def gen(w_0, l_0, w_1, l_1):
         while True:
             game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
-            game.play(*agents)
+            game.play(agents)
 
             if game.outcome == 1:
                 w_0 += 1
@@ -245,7 +252,7 @@ def compute_elo(agents, board_size, stones, komi, show=True,
             yield w_0, l_0, w_1, l_1
 
             game = Game(board_size=board_size, stones=stones, komi=komi, show=show)
-            game.play(*reversed(agents))
+            game.play(list(reversed(agents)))
 
             if game.outcome == 1:
                 l_1 += 1

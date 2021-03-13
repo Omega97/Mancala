@@ -40,10 +40,11 @@ def step(x):
         return .5
 
 
-def adjust_values(v, k=1.):
-    """ early values get closer to later values
+def adjust_values(v, target, k=1.):
+    """ early values get closer to target
 
     :param v: list of values
+    :param target:
     :param k:
     k = 0  ->  no change
     k = 1  ->  values change visibly
@@ -53,7 +54,7 @@ def adjust_values(v, k=1.):
     if k <= 0:
         return v
     else:
-        x = v[-1]
+        x = target
         out = [x]
         for i in reversed(range(len(v)-1)):
             x = v[i] + (x-v[i]) * 2**(-1/k)

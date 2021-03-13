@@ -104,19 +104,21 @@ class TreeAgent(Agent):
     - use fast agent to do the roll-outs
 
     TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100) --> Elo = 2600(100)
-    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100) --> Elo = 3000(200)
+    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=500) --> Elo = 3300(150)
+    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100) --> Elo = 3600(150)
     """
-    def __init__(self, core_agent, fast_agent, n_rollouts, k_focus=1., k_priority=1.5):
+    def __init__(self, core_agent, fast_agent, n_rollouts, k_focus_branch=1.5, k_focus_decision=1., heuristic_par=1.5):
         self.tree = None
         self.core_agent = core_agent
         self.fast_agent = fast_agent
         self.n_rollouts = n_rollouts
-        self.k_focus = k_focus
-        self.k_priority = k_priority
+        self.k_focus_branch = k_focus_branch
+        self.k_focus_decision = k_focus_decision
+        self.heuristic_par = heuristic_par
 
     def open(self, initial_state, player_id):
-        self.tree = Tree(initial_state, self.core_agent, self.fast_agent, player_id,
-                         k_focus=self.k_focus, k_priority=self.k_priority)
+        self.tree = Tree(initial_state, self.core_agent, self.fast_agent, player_id, k_focus_branch=self.k_focus_branch,
+                         k_focus_decision=self.k_focus_decision, heuristic_par=self.heuristic_par)
         self.tree.search(n_rollouts=self.n_rollouts)
 
     def set_move(self, move: ActionDistribution):
@@ -125,8 +127,46 @@ class TreeAgent(Agent):
 
     def get_move(self, state):
         self.tree.search(n_rollouts=self.n_rollouts)
-        return self.tree.get_policy_and_value()
+        return self.tree.get_final_policy_and_value()
 
     def __repr__(self):
-        return f'TreeAgent({self.core_agent}, {self.fast_agent}, {self.n_rollouts}, ' \
-            f'k_f={self.k_focus:.3f}, k_p={self.k_priority:.3f})'
+        return f'TreeAgent({self.core_agent}, {self.fast_agent}, n={self.n_rollouts}, ' \
+            f'k_fd={self.k_focus_decision:.3f}, k_b={self.k_focus_branch:.3f})'
+
+
+def custom_agent(fun, k_focus):
+    """ build custom agent class using a function
+    :param fun: state representation -> (policy, value)
+    :param k_focus: 0 = keep policy unchanged, 1 = keep only max
+    :return: custom agent class
+    """
+    class CustomAgent(Agent):
+        def __init__(self):
+            """
+            k = 0 -> don't change
+            k = 1 -> keep max
+            """
+            self.k = k_focus
+
+        def get_move(self, state):
+            policy, value = fun(state.representation())
+            return ActionDistribution(policy).focus(self.k), value
+
+    return CustomAgent
+
+
+def neural_net_agent(function, n_rollouts, k_focus_branch=1.5,
+                     k_focus_move=1., k_focus_rollout=1., k_focus_decision=1.):
+    core_agent = custom_agent(function, k_focus_move)
+    fast_agent = custom_agent(function, k_focus_rollout)
+
+    def repr_(self):
+        return f'NeuralNetAgent({self.core_agent}, {self.fast_agent}, n={self.n_rollouts}, ' \
+            f'k_fm={self.k_focus_decision:.3f}, k_b={self.k_branch:.3f})'
+
+    agent = TreeAgent(core_agent, fast_agent, n_rollouts,
+                      k_focus_branch=k_focus_branch, k_focus_decision=k_focus_decision)
+
+    agent.__repr__ = repr_
+
+    return agent
