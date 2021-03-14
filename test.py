@@ -1,8 +1,10 @@
-from utils import *
-from agents import *
-from game import Game, State, compute_elo
-from tree import Tree
+from random import seed
+import numpy as np
 import matplotlib.pyplot as plt
+from game import Game, State
+from elo import compute_elo
+from agents_collection import *
+from utils import *
 
 
 def test_mancala_gen():
@@ -23,12 +25,10 @@ def test_copy(board_size=3):
     print(s1)
 
 
-def test_kifu(board_size=4, stones=3, komi=.5, k_edit=3.):
+def test_kifu(board_size=5, stones=3, komi=.5, k_edit=3.):
     agents = []
-    # agents += [HumanAgent()]
-    # agents += [SimpleAgent()]
-    agents += [SimpleAgent()]
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1., heuristic_par=1.5)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=200, k_focus_branch=1., heuristic_par=1.2)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=200, k_focus_branch=1., heuristic_par=1.5)]
 
     game = Game(board_size=board_size, stones=stones, komi=komi, do_record=True, show=True)
     game.play(agents)
@@ -41,8 +41,7 @@ def test_kifu(board_size=4, stones=3, komi=.5, k_edit=3.):
     x0_ = [i.n_moves for i in data00['kifu']]
     x1_ = [i.n_moves for i in data01['kifu']]
 
-    i_print(data10)
-    i_print(data11)
+    i_print(game.get_training_data(k=3))
 
     length = len(game.kifu)
 
@@ -62,7 +61,7 @@ def test_kifu(board_size=4, stones=3, komi=.5, k_edit=3.):
     plt.show()
 
 
-def test_trees(board=None, board_size=6, stones=4, komi=.5, player=0, n_rollouts=300,
+def test_trees(board=None, board_size=6, stones=4, komi=.5, player=0, n_rollouts=100,
                k_focus=0, k_priority=1.5, show_tree=False, show=True):
 
     state0 = State(board_size=board_size, stones=stones, komi=komi, player=player)
@@ -121,9 +120,6 @@ def test_game(board_size=6, stones=4, komi=.5, n_rollouts=100, show=True):
     agents = []
     agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=n_rollouts)]
     agents += [SimpleAgent()]
-    # agents += [RandomAgent()]
-    # agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=n_rollouts)]
-    # agents += [HumanAgent()]
 
     game = Game(state=None, board_size=board_size, stones=stones, komi=komi, show=show)
     game.play(agents)
@@ -131,7 +127,6 @@ def test_game(board_size=6, stones=4, komi=.5, n_rollouts=100, show=True):
 
 def test_game_from_position(board, board_size, komi=.5, n_rollouts=100, player=0):
     agents = []
-    # agents += [HumanAgent()]
     agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=n_rollouts)]
     agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=n_rollouts)]
 
@@ -145,8 +140,6 @@ def test_elo(board_size=5, stones=3, komi=.5, t=1., show_game=True):
     agents = []
     agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1.5)]
     agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1.5)]
-    # agents += [RandomAgent()]
-    # agents += [SimpleAgent()]
 
     print('Computing...\n')
     gen = compute_elo(agents, board_size=board_size, stones=stones, komi=komi, show=show_game)
@@ -159,23 +152,21 @@ def test_elo(board_size=5, stones=3, komi=.5, t=1., show_game=True):
 
 def exercises(n_rollouts=100):
     """shows the exercises that have not been solved correctly"""
-    test_trees_exp(n_rollouts=n_rollouts, sol=(1, 3), board=[0, 3, 1, 2, 0, 0, 3, 1, 0, 0], player=0, board_size=4)
-    test_trees_exp(n_rollouts=n_rollouts, sol=(2,), board=[3, 1, 1, 0, 0, 0, 1, 4], player=0, board_size=3)
-    test_trees_exp(n_rollouts=n_rollouts, sol=(2,), board=[3, 1, 1, 0, 0, 1, 1, 4], player=0, board_size=3)
-    test_trees_exp(n_rollouts=n_rollouts, sol=(0,), board=[3, 1, 0, 0, 1, 1, 1, 3], player=0, board_size=3)
+    problems = [{'board': [3, 1, 1, 0, 0, 0, 1, 4], 'player': 0, 'board_size': 3, 'sol': (2,)},
+                {'board': [3, 1, 0, 0, 1, 1, 1, 3], 'player': 0, 'board_size': 3, 'sol': (0,)},
+                {'board': [0, 2, 1, 0, 0, 2, 1, 0], 'player': 0, 'board_size': 3, 'sol': (2,)},
+                {'board': [1, 0, 1, 4, 3, 1, 1, 0], 'player': 1, 'board_size': 3, 'sol': (2,)},
+                {'board': [4, 1, 1, 0, 0, 1, 1, 4], 'player': 1, 'board_size': 3, 'sol': (2,)},
+                {'board': [2, 1, 1, 3, 3, 1, 0, 0], 'player': 1, 'board_size': 3, 'sol': (0,)},
+                {'board': [4, 1, 0, 0, 3, 1, 2, 1], 'player': 1, 'board_size': 3, 'sol': (2,)},
+                {'board': [0, 3, 1, 2, 0, 0, 3, 1, 0, 0], 'player': 0, 'board_size': 4, 'sol': (1, 3)},
+                ]
 
-    test_trees_exp(n_rollouts=n_rollouts, sol=(2,), board=[0, 2, 1, 0, 0, 2, 1, 0], player=0, board_size=3)
-
-    test_trees_exp(n_rollouts=n_rollouts, sol=(2,), board=[0, 0, 1, 4, 3, 1, 1, 0], player=1, komi=-.5, board_size=3)
-    test_trees_exp(n_rollouts=n_rollouts, sol=(2,), board=[3, 1, 1, 0, 0, 1, 1, 4], player=1, komi=-.5, board_size=3)
-    test_trees_exp(n_rollouts=n_rollouts, sol=(0,), board=[1, 1, 1, 3, 3, 1, 0, 0], player=1, komi=-.5, board_size=3)
-    test_trees_exp(n_rollouts=n_rollouts, sol=(2,), board=[3, 1, 0, 0, 3, 1, 2, 1], player=1, komi=-.5, board_size=3)
+    for kw in problems:
+        test_trees_exp(n_rollouts=n_rollouts, **kw)
 
 
 def test_time(n_rollouts=30):
-    from time import time
-    from random import seed
-    import numpy as np
 
     v = []
 
@@ -189,12 +180,6 @@ def test_time(n_rollouts=30):
 
 def test_heuristic():
 
-    # board = [1, 0, 0, 0, 0, 1, 0,  0, 0, 0, 0, 0, 0, 0]
-    # board = [1, 0, 0, 0, 2, 1, 0,  0, 0, 0, 0, 0, 0, 2]
-    # board = [1, 0, 0, 3, 1, 1, 0,  0, 0, 0, 0, 0, 0, 4]
-    # board = [1, 0, 0, 0, 2, 1, 0,  0, 0, 0, 0, 2, 1, 0]
-    # board = [1, 1, 1, 3, 1, 1, 0,  0, 0, 0, 0, 0, 0, 4]
-
     board = [0, 0, 0, 3, 1, 1, 0,  0, 0, 0, 0, 2, 1, 1]
 
     for n_ in range(5, 11):
@@ -205,28 +190,7 @@ def test_heuristic():
 
 
 if __name__ == '__main__':
-    from random import seed
-    seed(0)
-
-    # test_trees([0, 0, 0, 0, 3, 0, 0,
-    #             0, 0, 0, 0, 2, 1, 0], player=0, n_rollouts=500)
-
-    # board_ = [0, 0, 0, 3, 1, 1, 0,
-    #           0, 0, 0, 0, 2, 1, 1]
-    # test_trees(board=board_, board_size=6, player=0,
-    #            show=True, show_tree=True, k_priority=1.5, n_rollouts=200)
-
-    # test_heuristic()
-
-    # exercises()
-
-    # test_game()
-    # test_time()
-    test_kifu()
-
-    # test_game_from_position(board=[0, 0, 0, 0, 2, 1, 2,
-    #                                0, 0, 0, 3, 1, 1, 0],
-    #                         board_size=6, player=0,
-    #                         n_rollouts=300)
-
+    # seed(0)
     # test_elo()
+    test_kifu()
+    # exercises()

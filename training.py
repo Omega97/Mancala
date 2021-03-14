@@ -1,37 +1,45 @@
-from agents import neural_net_agent
 from game import Game
+from agents_collection import neural_net_agent
+from utils import i_range
 
 
-def training_loop(neural_net, game: Game, n_rollouts):
-    """
+class Training:
 
-    neural_net:
-    - callable: neural_net(subjective_state_representation) -> (policy: list, value: float)
-    - .training(data, **kw): training method
-    """
+    def __init__(self, game: Game, n_rollouts=200):
+        self.game = game
+        self.n_rollouts = n_rollouts
+        self.agent = None
+        self.data = None
 
-    assert hasattr(neural_net, '__call__')
-    assert hasattr(neural_net, 'training')
+    def load_neural_net(self):
+        """  """
+        neural_net = ...
+        self.agent = neural_net_agent(neural_net, n_rollouts=self.n_rollouts)
 
-    while True:
+    def training(self):
+        """  """
+        ...
 
-        agent = neural_net_agent(neural_net, n_rollouts=n_rollouts)
-        game.play([agent, agent])
-        data = ...
-        neural_net.training(data)
+    def save(self):
+        """save"""
+        ...
+
+    def training_loop(self, k_game_edit=3., epochs=-1):
+        """
+        neural_net:
+        - callable: neural_net(subjective_state_representation) -> (policy: list, value: float)
+        - .training(data, **kw): training method
+        """
+
+        for _ in i_range(epochs):
+            self.game.play([self.agent, self.agent])     # <<<
+            self.data = self.game.get_training_data(k=k_game_edit)
+            self.training()
+            self.save()
 
 
 if __name__ == '__main__':
 
-    class NN:
-        def __init__(self, board_size=6):
-            self.board_size = board_size
-
-        def __call__(self, *args, **kwargs):
-            return [1 for _ in range(self.board_size)], .5
-
-        def training(self, data):
-            pass
-
-
-    training_loop(NN(), Game(), n_rollouts=200)
+    training = Training(Game())
+    training.load_neural_net()
+    training.training_loop(epochs=10)

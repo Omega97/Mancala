@@ -1,5 +1,5 @@
-from random import random
 from time import time
+from random import random
 
 
 def i_print(itr, n=-1):
@@ -83,3 +83,11 @@ def argmax(v):
             max_ = x
             index = i+1
     return index
+
+
+def i_range(n):
+    """range, but when n is not an int >= 0 it goes to infinity"""
+    i = 0
+    while i != n:
+        yield i
+        i += 1
