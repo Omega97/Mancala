@@ -1,4 +1,8 @@
-from action_distribution import ActionDistribution
+
+try:
+    from action_distribution import ActionDistribution
+except ImportError:
+    from .action_distribution import ActionDistribution
 
 
 class Agent:

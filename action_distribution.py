@@ -1,6 +1,10 @@
 import numpy as np
 from copy import copy
-from utils import choose
+
+try:
+    from utils import choose
+except ImportError:
+    from .utils import choose
 
 
 class ActionDistribution:
@@ -36,6 +40,7 @@ class ActionDistribution:
 
     def normalize(self):
         self.v /= self.norm()
+        return self
 
     def quick_choose(self) -> int:
         """return an index of a random element using self.v as weights"""

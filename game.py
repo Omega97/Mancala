@@ -1,7 +1,10 @@
-from state import State
-from utils import *
 
-# todo if resign -> update state outcome
+try:
+    from state import State
+    from utils import *
+except ImportError:
+    from .state import State
+    from .utils import *
 
 
 class Game:
@@ -12,6 +15,7 @@ class Game:
         self.state = state
         self.outcome = None
         self.kifu = []
+        self.policy_record = []     # record of the actual visits of the first nodes
         self.values = []  # record of subjective expectation of result
         self.players = []  # record of who was on duty
 
@@ -22,17 +26,20 @@ class Game:
         self.show = show
         self.do_record = do_record
 
-    def save_info(self, value):
+    def save_info(self, policy, value):
         if self.do_record:
             self.players += [self.state.player]
             self.kifu += [self.state]
+            self.policy_record += [policy]
             self.values += [value]
 
     def reset(self):
+        """prepare the class instance for a new game"""
         self.state = None
         self.outcome = None
         self.kifu = []
         self.values = []
+        self.policy_record = []
         self.players = []
 
     def game_loop(self, players):
@@ -50,7 +57,7 @@ class Game:
                 p.set_move(move)
 
             if self.do_record:
-                self.save_info(value)   # before performing the move
+                self.save_info(policy, value)   # before performing the move
 
             self.state = self.state.make_move(move)
 
@@ -91,7 +98,7 @@ class Game:
         self.game_loop(players)
         self.outcome = self.state.get_result()
         self._close_bots(players)
-        self.save_info(self.state.get_subjective_result())
+        # self.save_info(self.state.get_subjective_result())    # todo last state?
         self._print_ending()
         return self.outcome
 
@@ -129,7 +136,9 @@ class Game:
 
         state_repr = [i.representation() for i in kifu]
 
-        return {'kifu': kifu, 'values': values, 'players': players,
+        policy_record = [[i for i in self.policy_record[i].normalize()] for i in n_moves]
+
+        return {'kifu': kifu, 'values': values, 'policy_record': policy_record, 'players': players,
                 'n_moves': n_moves, 'state_repr': state_repr, 'outcome': outcome}
 
     def get_edited_player_data(self, player, k):
@@ -139,7 +148,7 @@ class Game:
         data = self.get_player_data(player)
         assert data['outcome'] is not None
         values = adjust_values(data['values'], target=data['outcome'], k=k)
-        return [(data['state_repr'][i], values[i]) for i in range(len(values))]
+        return [(data['state_repr'][i], data['policy_record'][i], values[i]) for i in range(len(values))]
 
     def get_training_data(self, k=3.):
         """data ready for training"""

@@ -1,6 +1,11 @@
 from copy import copy
-from game import State
-from action_distribution import one_hot
+
+try:
+    from state import State
+    from action_distribution import one_hot
+except ImportError:
+    from .state import State
+    from .action_distribution import one_hot
 
 
 class Node:

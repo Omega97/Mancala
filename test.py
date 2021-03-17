@@ -1,10 +1,23 @@
 from random import seed
 import numpy as np
 import matplotlib.pyplot as plt
-from game import Game, State
-from elo import compute_elo
-from agents_collection import *
-from utils import *
+
+try:
+    from game import Game
+    from state import State
+    from utils import *
+    from elo import compute_elo
+    from agents_collection import *
+    from action_distribution import ActionDistribution
+    from tree import Tree
+except ImportError:
+    from .game import Game
+    from .state import State
+    from .utils import *
+    from .elo import compute_elo
+    from .agents_collection import *
+    from .action_distribution import ActionDistribution
+    from .tree import Tree
 
 
 def test_mancala_gen():
@@ -27,8 +40,8 @@ def test_copy(board_size=3):
 
 def test_kifu(board_size=5, stones=3, komi=.5, k_edit=3.):
     agents = []
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=200, k_focus_branch=1., heuristic_par=1.2)]
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=200, k_focus_branch=1., heuristic_par=1.5)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1., k_focus_decision=.9)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1., k_focus_decision=.9)]
 
     game = Game(board_size=board_size, stones=stones, komi=komi, do_record=True, show=True)
     game.play(agents)
@@ -47,13 +60,13 @@ def test_kifu(board_size=5, stones=3, komi=.5, k_edit=3.):
 
     fig, ax = plt.subplots(2)
     ax[0].plot(x0_, data00['values'])
-    ax[0].plot(x0_, [i[1] for i in data10])
+    ax[0].plot(x0_, [i[-1] for i in data10])
     ax[0].scatter(length-1, data00['outcome'], c='orange')
     ax[0].set_xlim([0, length])
     ax[0].set_ylim([-.1, 1.1])
 
     ax[1].plot(x1_, data01['values'])
-    ax[1].plot(x1_, [i[1] for i in data11])
+    ax[1].plot(x1_, [i[-1] for i in data11])
     ax[1].set_xlim([0, length])
     ax[1].set_ylim([-.1, 1.1])
     ax[1].scatter(length-1, data01['outcome'], c='orange')
@@ -138,8 +151,8 @@ def test_game_from_position(board, board_size, komi=.5, n_rollouts=100, player=0
 
 def test_elo(board_size=5, stones=3, komi=.5, t=1., show_game=True):
     agents = []
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1.5)]
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1.5)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=800)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100)]
 
     print('Computing...\n')
     gen = compute_elo(agents, board_size=board_size, stones=stones, komi=komi, show=show_game)
@@ -190,7 +203,8 @@ def test_heuristic():
 
 
 if __name__ == '__main__':
-    # seed(0)
-    # test_elo()
-    test_kifu()
+    seed(0)
+
     # exercises()
+    test_kifu()
+    # test_elo()

@@ -1,6 +1,12 @@
-from game import Game
-from action_distribution import ActionDistribution
-from node import Node
+
+try:
+    from game import Game
+    from action_distribution import ActionDistribution
+    from node import Node
+except ImportError:
+    from .game import Game
+    from .action_distribution import ActionDistribution
+    from .node import Node
 
 
 class Tree:
@@ -26,6 +32,7 @@ class Tree:
         return self.root
 
     def set_root(self, node):
+        """set the new root to node"""
         self.root.token = False
         self.root = node
         self.root.token = True
@@ -72,20 +79,22 @@ class Tree:
                 # update tree
                 node.backtracking(outcome)
 
-    def get_final_policy_and_value(self):
-        """use the resulting tree of the search to determine a policy and a value"""
-        if len(self.get_root().get_child()) == 0:
-            return self.get_root().get_policy(), self.get_root().get_value()
-
+    def compute_tree_policy(self):
+        """ return the visit distribution of the possible moves in the root state """
         p = [1 for _ in self.get_root().get_policy()]
 
         for i in self.get_root():
             p[i] = self.get_root().get_child()[i].get_visits()
 
-        policy = ActionDistribution(p)
-        policy *= self.get_root().state.legal_moves()
-        policy = policy.focus(k=self.k_focus_decision)
+        return ActionDistribution(p)
 
+    def get_final_policy_and_value(self):
+        """use the resulting tree of the search to determine a policy and a value"""
+        if len(self.get_root().get_child()) == 0:
+            return self.get_root().get_policy(), self.get_root().get_value()
+
+        policy = self.compute_tree_policy()
+        policy = policy.focus(k=self.k_focus_decision)
         value = self.get_root().expectation()
 
         return policy, value

@@ -1,6 +1,12 @@
-from game import Game
-from agents_collection import neural_net_agent
-from utils import i_range
+
+try:
+    from game import Game
+    from agents_collection import neural_net_agent
+    from utils import i_range
+except ImportError:
+    from .game import Game
+    from .agents_collection import neural_net_agent
+    from .utils import i_range
 
 
 class Training:

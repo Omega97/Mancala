@@ -1,12 +1,18 @@
-from action_distribution import ActionDistribution
 from math import tanh
-from agent import Agent
-from tree import Tree
+
+try:
+    from action_distribution import ActionDistribution
+    from agent import Agent
+    from tree import Tree
+except ImportError:
+    from .action_distribution import ActionDistribution
+    from .agent import Agent
+    from .tree import Tree
 
 
 class RandomAgent(Agent):
     """random moves
-    Elo = 0(0)"""
+    Elo = 0"""
     def get_move(self, state):
         v = [1 for _ in range(state.board_size)]
         return ActionDistribution(v), .5
@@ -17,7 +23,7 @@ class RandomAgent(Agent):
 
 class SimpleAgent(Agent):
     """simple heuristic
-        Elo = 1950(50)
+        Elo = 850
         """
     def __init__(self, x1=5., m1=50, x2=.25, m2=1., k_value=6):
         self.x1 = x1
@@ -73,11 +79,10 @@ class TreeAgent(Agent):
     - use core_agent for the policy
     - use fast agent to do the roll-outs
 
-    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100) --> Elo = 2600(100)
-    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=500) --> Elo = 3300(150)
-    TreeAgent(SimpleAgent(), SimpleAgent(), n_rollouts=100) --> Elo = 3600(150)
+    TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100) --> Elo = 1350
+    TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=800) --> Elo = 1450
     """
-    def __init__(self, core_agent, fast_agent, n_rollouts, k_focus_branch=1.5, k_focus_decision=1., heuristic_par=1.5):
+    def __init__(self, core_agent, fast_agent, n_rollouts, k_focus_branch=1., k_focus_decision=1., heuristic_par=1.5):
         self.tree = None
         self.core_agent = core_agent
         self.fast_agent = fast_agent

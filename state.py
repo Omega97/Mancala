@@ -1,6 +1,11 @@
 from copy import copy
-from action_distribution import ActionDistribution
-from utils import *
+
+try:
+    from action_distribution import ActionDistribution
+    from utils import *
+except ImportError:
+    from .action_distribution import ActionDistribution
+    from .utils import *
 
 
 class State:

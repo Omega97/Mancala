@@ -1,5 +1,9 @@
 from math import log
-from game import Game
+
+try:
+    from game import Game
+except ImportError:
+    from .game import Game
 
 
 def compute_elo(agents, board_size, stones, komi, show=True,
@@ -7,7 +11,7 @@ def compute_elo(agents, board_size, stones, komi, show=True,
 
     assert len(agents) == 2
 
-    def elo(n_won, n_lost, c_elo=1/400):
+    def elo(n_won, n_lost, c_elo=log(10) / 400):
         score = (n_won + 1) / (n_won + n_lost + 2)
         return -log(1 / score - 1) / c_elo
 
