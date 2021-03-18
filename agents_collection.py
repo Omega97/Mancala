@@ -104,6 +104,10 @@ class TreeAgent(Agent):
         self.tree.search(n_rollouts=self.n_rollouts)
         return self.tree.get_final_policy_and_value()
 
+    def get_raw_policy(self):
+        """after the search"""
+        return self.tree.raw_policy
+
     def __repr__(self):
         return f'TreeAgent({self.core_agent}, {self.fast_agent}, n={self.n_rollouts}, ' \
             f'k_fd={self.k_focus_decision:.3f}, k_b={self.k_focus_branch:.3f})'
@@ -137,7 +141,7 @@ def neural_net_agent(function, n_rollouts, k_focus_branch=1.5,
 
     def repr_(self):
         return f'NeuralNetAgent({self.core_agent}, {self.fast_agent}, n={self.n_rollouts}, ' \
-            f'k_fm={self.k_focus_decision:.3f}, k_b={self.k_branch:.3f})'
+            f'k_fm={self.k_focus_decision:.2f}, k_b={self.k_branch:.2f})'
 
     agent = TreeAgent(core_agent, fast_agent, n_rollouts,
                       k_focus_branch=k_focus_branch, k_focus_decision=k_focus_decision)

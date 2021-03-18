@@ -26,8 +26,17 @@ class ActionDistribution:
         return '[' + '  '.join(f'{i:.3f}' for i in v) + ']'
 
     def __mul__(self, other):
-        assert len(self) == len(other)
-        return ActionDistribution([self[i] * other[i] for i in range(len(self))])
+        if type(other) in [int, float]:
+            return ActionDistribution(self.v * other)
+        else:
+            assert len(self) == len(other)
+            return ActionDistribution([self[i] * other[i] for i in range(len(self))])
+
+    def __add__(self, other):
+        if type(other) == type(self):
+            return ActionDistribution(self.v + other.v)
+        else:
+            raise ValueError
 
     def __iter__(self):
         return iter(self.v)

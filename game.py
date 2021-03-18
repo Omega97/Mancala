@@ -27,11 +27,10 @@ class Game:
         self.do_record = do_record
 
     def save_info(self, policy, value):
-        if self.do_record:
-            self.players += [self.state.player]
-            self.kifu += [self.state]
-            self.policy_record += [policy]
-            self.values += [value]
+        self.players += [self.state.player]
+        self.kifu += [self.state]
+        self.policy_record += [policy]
+        self.values += [value]
 
     def reset(self):
         """prepare the class instance for a new game"""
@@ -48,7 +47,8 @@ class Game:
                 print(self.state)
 
             # get move from current player
-            policy, value = players[self.state.player].get_move(self.state)
+            player = players[self.state.player]
+            policy, value = player.get_move(self.state)
             policy *= self.state.legal_moves()  # filter out illegal moves
             move = policy.choose_move()
 
@@ -56,8 +56,12 @@ class Game:
             for p in players:
                 p.set_move(move)
 
-            if self.do_record:
-                self.save_info(policy, value)   # before performing the move
+            if self.do_record:              # before performing the move
+                raw_policy = player.get_raw_policy()
+                if raw_policy is not None:
+                    self.save_info(raw_policy, value)
+                else:
+                    self.save_info(policy, value)
 
             self.state = self.state.make_move(move)
 

@@ -88,9 +88,11 @@ class State:
         s += '   '
         n = self.board_size
         for i in self.board[:n]:
-            s += f'{i:{space_1+1}}' + ' ' * space_1
+            s += f'{i:{space_1+1}}' if i else ' ' * space_1 + '.'
+            s += ' ' * space_1
         s += f'{self.board[n]:{space_2+1}}' + ' ' * (space_2+2)
         for i in self.board[n+1:2*n+1]:
-            s += f'{i:{space_1+1}}' + ' ' * space_1
+            s += f'{i:{space_1+1}}' if i else ' ' * space_1 + '.'
+            s += ' ' * space_1
         s += f'{self.board[2*n+1]:{space_2+1}}'
         return s

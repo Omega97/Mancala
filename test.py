@@ -38,10 +38,11 @@ def test_copy(board_size=3):
     print(s1)
 
 
-def test_kifu(board_size=5, stones=3, komi=.5, k_edit=3.):
+def test_kifu(board_size=6, stones=4, komi=1.5, k_edit=5.):
     agents = []
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1., k_focus_decision=.9)]
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1., k_focus_decision=.9)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1., k_focus_decision=1.)]
+    # agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100, k_focus_branch=1., k_focus_decision=1.)]
+    agents += [HumanAgent()]
 
     game = Game(board_size=board_size, stones=stones, komi=komi, do_record=True, show=True)
     game.play(agents)
@@ -54,7 +55,10 @@ def test_kifu(board_size=5, stones=3, komi=.5, k_edit=3.):
     x0_ = [i.n_moves for i in data00['kifu']]
     x1_ = [i.n_moves for i in data01['kifu']]
 
-    i_print(game.get_training_data(k=3))
+    for board, policy, value in game.get_training_data(k=3):
+        b = ' '.join([f'{i:2}'.replace('0', '.') for i in board])
+        p = ' '.join([f'{i:6.3f}' if i else f'{i:6.0f}' for i in policy])
+        print(f'{b} \t\t {p} \t {value:6.3f}')
 
     length = len(game.kifu)
 
@@ -151,7 +155,7 @@ def test_game_from_position(board, board_size, komi=.5, n_rollouts=100, player=0
 
 def test_elo(board_size=5, stones=3, komi=.5, t=1., show_game=True):
     agents = []
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=800)]
+    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=200, k_focus_decision=.6)]    # .6
     agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100)]
 
     print('Computing...\n')
@@ -193,7 +197,7 @@ def test_time(n_rollouts=30):
 
 def test_heuristic():
 
-    board = [0, 0, 0, 3, 1, 1, 0,  0, 0, 0, 0, 2, 1, 1]
+    board = [0, 0, 0, 3, 1, 1, 0, 0, 0, 0, 0, 2, 1, 1]
 
     for n_ in range(5, 11):
         p = test_trees(board=board, board_size=6, player=0, show=False, n_rollouts=2 ** n_)
@@ -205,6 +209,7 @@ def test_heuristic():
 if __name__ == '__main__':
     seed(0)
 
+    # test_trees()
     # exercises()
     test_kifu()
     # test_elo()

@@ -25,6 +25,9 @@ class Tree:
         self.k_focus_decision = k_focus_decision
         self.heuristic_par = heuristic_par
 
+        self.raw_policy = None
+        self.raw_value = None
+
     def __repr__(self):
         return str(self.get_root())
 
@@ -55,6 +58,18 @@ class Tree:
             else:                               # create sub-node
                 return root.add_child(move_id)
 
+    def compute_tree_policy(self, w=.1):    # todo edit weigth
+        """ calculate the visit distribution of the possible moves in the root state """
+        p0 = self.get_root().get_policy().normalize()
+
+        p = [0 for _ in self.get_root().get_policy()]
+
+        for i in self.get_root():
+            p[i] = self.get_root().get_child()[i].get_visits()
+        p1 = ActionDistribution(p).normalize()
+
+        return p0 * w + p1 * (1-w)
+
     def search(self, n_rollouts):
 
         for _ in range(n_rollouts):
@@ -79,23 +94,16 @@ class Tree:
                 # update tree
                 node.backtracking(outcome)
 
-    def compute_tree_policy(self):
-        """ return the visit distribution of the possible moves in the root state """
-        p = [1 for _ in self.get_root().get_policy()]
-
-        for i in self.get_root():
-            p[i] = self.get_root().get_child()[i].get_visits()
-
-        return ActionDistribution(p)
+        self.raw_policy = self.compute_tree_policy()
+        self.raw_value = self.get_root().expectation()
 
     def get_final_policy_and_value(self):
         """use the resulting tree of the search to determine a policy and a value"""
         if len(self.get_root().get_child()) == 0:
-            return self.get_root().get_policy(), self.get_root().get_value()
+            return self.get_root().get_policy(), self.get_root().get_value()    # todo check?
 
-        policy = self.compute_tree_policy()
-        policy = policy.focus(k=self.k_focus_decision)
-        value = self.get_root().expectation()
+        policy = self.raw_policy.focus(k=self.k_focus_decision)
+        value = self.raw_value
 
         return policy, value
 
