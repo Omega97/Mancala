@@ -10,6 +10,14 @@ def i_print(itr, n=-1):
     print()
 
 
+def i_range(n):
+    """range, but when n is not an int >= 0 it goes to infinity"""
+    i = 0
+    while i != n:
+        yield i
+        i += 1
+
+
 def yield_periodically(itr, period):
     """yield periodically, only after "period" of time"""
     t = time()
@@ -85,9 +93,7 @@ def argmax(v):
     return index
 
 
-def i_range(n):
-    """range, but when n is not an int >= 0 it goes to infinity"""
-    i = 0
-    while i != n:
-        yield i
-        i += 1
+def is_max(v):
+    """return a list of all elements equal to max (at least 1)"""
+    max_ = max(v)
+    return [int(x == max_) for i, x in enumerate(v)]

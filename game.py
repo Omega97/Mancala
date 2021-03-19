@@ -50,6 +50,10 @@ class Game:
             player = players[self.state.player]
             policy, value = player.get_move(self.state)
             policy *= self.state.legal_moves()  # filter out illegal moves
+
+            if policy.norm() == 0:
+                raise ValueError('policy must contain at least one legal move!')
+
             move = policy.choose_move()
 
             # distribute move to all players

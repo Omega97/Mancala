@@ -12,7 +12,7 @@ except ImportError:
 class Tree:
 
     def __init__(self, state, core_agent, fast_agent, player_id,
-                 k_focus_branch=1.5, k_focus_decision=1., heuristic_par=1.5):
+                 k_focus_branch=1, k_focus_decision=1., heuristic_par=1.5):
         self.root = Node(state, agent=core_agent, token=True)
         self.fast_agent = fast_agent
         self.active_nodes = [self.root]

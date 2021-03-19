@@ -153,10 +153,11 @@ def test_game_from_position(board, board_size, komi=.5, n_rollouts=100, player=0
     print(game)
 
 
-def test_elo(board_size=5, stones=3, komi=.5, t=1., show_game=True):
+def test_elo(board_size=6, stones=4, komi=.5, t=1., show_game=True):
     agents = []
-    agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=200, k_focus_decision=.6)]    # .6
     agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100)]
+    # agents += [TreeAgent(RandomAgent(), SimpleAgent(), n_rollouts=100)]
+    agents += [SimpleAgent()]
 
     print('Computing...\n')
     gen = compute_elo(agents, board_size=board_size, stones=stones, komi=komi, show=show_game)
@@ -211,5 +212,5 @@ if __name__ == '__main__':
 
     # test_trees()
     # exercises()
-    test_kifu()
-    # test_elo()
+    # test_kifu()
+    test_elo(show_game=False)

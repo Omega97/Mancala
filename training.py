@@ -1,3 +1,6 @@
+"""
+Here is where training actually happens
+"""
 
 try:
     from game import Game
@@ -11,41 +14,57 @@ except ImportError:
 
 class Training:
 
-    def __init__(self, game: Game, n_rollouts=200):
+    def __init__(self, game: Game, n_rollouts=100, k_edit=10.):
         self.game = game
         self.n_rollouts = n_rollouts
-        self.agent = None
-        self.data = None
+        self.k_edit = k_edit
+        self.model = None
+        self.agent1 = None
+        self.agent2 = None
+        self.raw_data = None
+        self.data_set = None
 
-    def load_neural_net(self):
-        """  """
-        neural_net = ...
-        self.agent = neural_net_agent(neural_net, n_rollouts=self.n_rollouts)
+    def load_neural_net(self, **__):
+        """ try to load neural network from file, otw create it from scratch """
+        ...
+
+        def f(v):
+            n = (len(v)-1) // 2
+            return [1] * n
+
+        self.model = f
+        self.agent1 = neural_net_agent(self.model, n_rollouts=self.n_rollouts)
+        self.agent2 = neural_net_agent(self.model, n_rollouts=self.n_rollouts)
+
+    def prepare_dataset(self):
+        """ use raw_data data to create data_set """
+        ...
 
     def training(self):
-        """  """
+        """ update model using data_set """
         ...
 
     def save(self):
-        """save"""
+        """save model on the device"""
         ...
+    print('save')
 
-    def training_loop(self, k_game_edit=3., epochs=-1):
-        """
-        neural_net:
-        - callable: neural_net(subjective_state_representation) -> (policy: list, value: float)
-        - .training(data, **kw): training method
-        """
+    def training_loop(self, epochs=-1):
+        """ here is where training actually happens"""
+        assert self.agent1 is not None
+        assert self.agent2 is not None
 
         for _ in i_range(epochs):
-            self.game.play([self.agent, self.agent])     # <<<
-            self.data = self.game.get_training_data(k=k_game_edit)
+            self.game.play([self.agent1, self.agent2])
+            self.raw_data = self.game.get_training_data(k=self.k_edit)
+            self.prepare_dataset()
             self.training()
             self.save()
 
 
 if __name__ == '__main__':
 
-    training = Training(Game())
+    training = Training(Game(board_size=3, stones=3, do_record=True, show=True),
+                        n_rollouts=30, k_edit=5)
     training.load_neural_net()
-    training.training_loop(epochs=10)
+    training.training_loop(epochs=2)
